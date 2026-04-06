@@ -54,6 +54,29 @@ async function listMenus({ current, pageSize, menuName, status }) {
   };
 }
 
+async function listAllMenus() {
+  const [rows] = await pool.query(
+    `SELECT
+      m.id,
+      m.parent_id,
+      m.menu_name,
+      m.menu_code,
+      m.path,
+      m.component,
+      m.icon,
+      m.sort_order,
+      m.status,
+      m.created_at,
+      m.updated_at,
+      parent.menu_name AS parent_name
+     FROM sys_menus m
+     LEFT JOIN sys_menus parent ON parent.id = m.parent_id
+     ORDER BY m.sort_order ASC, m.id ASC`
+  );
+
+  return rows;
+}
+
 async function findById(id) {
   const [rows] = await pool.execute(
     `SELECT
@@ -77,6 +100,17 @@ async function findById(id) {
   );
 
   return rows[0] || null;
+}
+
+async function countChildren(parentId) {
+  const [rows] = await pool.execute(
+    `SELECT COUNT(*) AS total
+     FROM sys_menus
+     WHERE parent_id = ?`,
+    [parentId]
+  );
+
+  return rows[0]?.total || 0;
 }
 
 async function findByMenuCode(menuCode) {
@@ -150,11 +184,21 @@ async function updateStatus(id, status) {
   );
 }
 
+async function deleteMenu(id) {
+  await pool.execute(
+    'DELETE FROM sys_menus WHERE id = ?',
+    [id]
+  );
+}
+
 module.exports = {
   createMenu,
+  countChildren,
+  deleteMenu,
   findById,
   findByMenuCode,
   findByMenuCodeExcludingId,
+  listAllMenus,
   listMenus,
   updateMenu,
   updateStatus,

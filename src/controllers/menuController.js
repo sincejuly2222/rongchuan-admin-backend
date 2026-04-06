@@ -49,6 +49,30 @@ function parseSortOrder(value, defaultValue) {
   return normalized;
 }
 
+function buildMenuTree(menus) {
+  const menuMap = new Map();
+
+  menus.forEach((menu) => {
+    menuMap.set(menu.id, {
+      ...menu,
+      children: [],
+    });
+  });
+
+  const roots = [];
+
+  menuMap.forEach((menu) => {
+    if (menu.parent_id > 0 && menuMap.has(menu.parent_id)) {
+      menuMap.get(menu.parent_id).children.push(menu);
+      return;
+    }
+
+    roots.push(menu);
+  });
+
+  return roots;
+}
+
 async function listMenus(req, res, next) {
   try {
     const current = Number(req.query.current || req.query.page || 1);
@@ -89,6 +113,20 @@ async function listMenus(req, res, next) {
     return sendSuccess(res, {
       message: '获取菜单列表成功',
       data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listMenuTree(req, res, next) {
+  try {
+    const menus = await menuModel.listAllMenus();
+    const tree = buildMenuTree(menus);
+
+    return sendSuccess(res, {
+      message: '获取菜单树成功',
+      data: tree,
     });
   } catch (error) {
     return next(error);
@@ -260,9 +298,45 @@ async function updateMenuStatus(req, res, next) {
   }
 }
 
+async function deleteMenu(req, res, next) {
+  try {
+    const menuId = Number(req.params.id);
+
+    if (!Number.isFinite(menuId) || menuId < 1) {
+      return sendError(res, { statusCode: 400, message: '菜单ID不正确' });
+    }
+
+    const menu = await menuModel.findById(menuId);
+    if (!menu) {
+      return sendError(res, { statusCode: 404, message: '菜单不存在' });
+    }
+
+    const childrenCount = await menuModel.countChildren(menuId);
+    if (childrenCount > 0) {
+      return sendError(res, {
+        statusCode: 400,
+        message: '当前菜单存在子菜单，不能直接删除',
+      });
+    }
+
+    await menuModel.deleteMenu(menuId);
+
+    return sendSuccess(res, {
+      message: '删除菜单成功',
+      data: {
+        id: menuId,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   createMenu,
+  deleteMenu,
   listMenus,
+  listMenuTree,
   updateMenu,
   updateMenuStatus,
 };

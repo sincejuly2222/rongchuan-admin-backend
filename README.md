@@ -434,9 +434,11 @@ axios.get('http://localhost:3000/api/auth/me', {
 ### 菜单管理
 
 - `GET /api/menus`
+- `GET /api/menus/tree`
 - `POST /api/menus`
 - `PUT /api/menus/:id`
 - `PATCH /api/menus/:id/status`
+- `DELETE /api/menus/:id`
 
 完整接口字段、请求体和返回示例请查看：
 
