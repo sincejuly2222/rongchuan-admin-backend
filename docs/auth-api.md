@@ -1,8 +1,8 @@
-# rongchuanAdminBackend API 文档
+# rongchuanAdminBackend 后台管理端 API 文档
 
 Base path: `/api`
 
-本文档基于当前后端代码整理，覆盖健康检查、认证、用户、角色、权限、菜单全部已注册接口。
+本文档基于当前后端代码整理，覆盖当前已经实现并注册到服务中的后台管理端接口，包括健康检查、认证、用户、角色、权限、菜单、校友管理、学籍管理、名片管理、名片交换等。
 
 ## 通用说明
 
@@ -1235,3 +1235,423 @@ Path 参数：
 - `401`: 缺少访问令牌
 - `401`: 访问令牌无效或已过期
 - `404`: 菜单不存在
+
+## 26. 获取校友列表
+
+`GET /api/alumni-users`
+
+Query 参数：
+
+- `current`: 页码，默认 `1`
+- `page`: 页码别名
+- `pageSize`: 每页条数，默认 `10`
+- `keyword`: 按姓名、公司、手机号模糊搜索
+- `status`: 校友状态，支持 `0`、`1`
+- `verifiedStatus`: 认证状态，支持 `0`、`1`、`2`、`3`
+- `enrollmentYear`: 入学年份
+- `major`: 专业模糊搜索
+- `className`: 班级模糊搜索
+- `company`: 公司模糊搜索
+
+成功响应：
+
+```json
+{
+  "code": 200,
+  "message": "获取校友列表成功",
+  "data": {
+    "list": [
+      {
+        "id": 1,
+        "open_id": "wx_openid_001",
+        "phone": "13800000001",
+        "name": "张三",
+        "avatar": null,
+        "gender": 1,
+        "company": "融川科技",
+        "position": "产品经理",
+        "city": "上海",
+        "status": 1,
+        "verified_status": 2,
+        "allow_search": 1,
+        "created_at": "2026-04-08T12:00:00.000Z",
+        "school": "融川大学",
+        "college": "信息学院",
+        "major": "计算机科学与技术",
+        "class_name": "1801",
+        "enrollment_year": 2018,
+        "slogan": "连接校友，连接机会"
+      }
+    ],
+    "total": 1,
+    "current": 1,
+    "pageSize": 10
+  }
+}
+```
+
+错误情况：
+
+- `400`: 分页参数不正确
+- `400`: 筛选参数不正确
+- `401`: 缺少访问令牌
+- `401`: 访问令牌无效或已过期
+
+## 27. 新增校友
+
+`POST /api/alumni-users`
+
+请求体：
+
+```json
+{
+  "openId": "wx_openid_001",
+  "phone": "13800000001",
+  "name": "张三",
+  "avatar": "https://example.com/avatar.png",
+  "gender": 1,
+  "company": "融川科技",
+  "position": "产品经理",
+  "city": "上海",
+  "bio": "2018级校友，关注校友资源连接",
+  "status": 1,
+  "verifiedStatus": 2,
+  "allowSearch": 1
+}
+```
+
+字段说明：
+
+- `name`: 必填
+- `openId`: 可选，唯一
+- `phone`: 可选，需满足中国大陆手机号格式，唯一
+- `gender`: 可选，支持 `0`、`1`、`2`
+- `status`: 可选，支持 `0`、`1`
+- `verifiedStatus`: 可选，支持 `0`、`1`、`2`、`3`
+- `allowSearch`: 可选，支持 `0`、`1`
+
+成功响应：
+
+```json
+{
+  "code": 201,
+  "message": "新增校友成功",
+  "data": {
+    "id": 1,
+    "open_id": "wx_openid_001",
+    "phone": "13800000001",
+    "name": "张三",
+    "avatar": "https://example.com/avatar.png",
+    "gender": 1,
+    "company": "融川科技",
+    "position": "产品经理",
+    "city": "上海",
+    "bio": "2018级校友，关注校友资源连接",
+    "status": 1,
+    "verified_status": 2,
+    "allow_search": 1,
+    "created_at": "2026-04-08T12:00:00.000Z",
+    "updated_at": "2026-04-08T12:00:00.000Z",
+    "student_record": null,
+    "card": null
+  }
+}
+```
+
+错误情况：
+
+- `400`: 姓名不能为空
+- `400`: 姓名长度不能超过 100 个字符
+- `400`: 手机号格式不正确
+- `400`: 参数不正确
+- `401`: 缺少访问令牌
+- `401`: 访问令牌无效或已过期
+- `409`: OpenID 已存在
+- `409`: 手机号已存在
+
+## 28. 获取校友详情
+
+`GET /api/alumni-users/:id`
+
+Path 参数：
+
+- `id`: 校友 ID
+
+成功响应：
+
+```json
+{
+  "code": 200,
+  "message": "获取校友详情成功",
+  "data": {
+    "id": 1,
+    "open_id": "wx_openid_001",
+    "phone": "13800000001",
+    "name": "张三",
+    "avatar": "https://example.com/avatar.png",
+    "gender": 1,
+    "company": "融川科技",
+    "position": "产品经理",
+    "city": "上海",
+    "bio": "2018级校友，关注校友资源连接",
+    "status": 1,
+    "verified_status": 2,
+    "allow_search": 1,
+    "created_at": "2026-04-08T12:00:00.000Z",
+    "updated_at": "2026-04-08T12:00:00.000Z",
+    "student_record": {
+      "id": 1,
+      "school": "融川大学",
+      "college": "信息学院",
+      "major": "计算机科学与技术",
+      "class_name": "1801",
+      "student_no": "20180001",
+      "enrollment_year": 2018,
+      "graduation_year": 2022,
+      "status": 2
+    },
+    "card": {
+      "id": 1,
+      "slogan": "连接校友，连接机会",
+      "show_phone": 1,
+      "show_wechat": 1,
+      "wechat": "zhangsan001",
+      "need_approval": 0,
+      "allow_search": 1
+    }
+  }
+}
+```
+
+错误情况：
+
+- `400`: 校友ID不正确
+- `401`: 缺少访问令牌
+- `401`: 访问令牌无效或已过期
+- `404`: 校友不存在
+
+## 29. 编辑校友
+
+`PUT /api/alumni-users/:id`
+
+请求体示例：
+
+```json
+{
+  "phone": "13800000009",
+  "name": "张三丰",
+  "avatar": "https://example.com/avatar-new.png",
+  "gender": 1,
+  "company": "融川科技",
+  "position": "高级产品经理",
+  "city": "杭州",
+  "bio": "持续参与校友活动",
+  "status": 1,
+  "verifiedStatus": 2,
+  "allowSearch": 1
+}
+```
+
+说明：
+
+- 支持修改校友基础资料
+- 未传字段会保留原值
+- `openId` 和 `phone` 仍会做唯一性校验
+
+错误情况：
+
+- `400`: 校友ID不正确
+- `400`: 姓名不能为空
+- `400`: 手机号格式不正确
+- `400`: 参数不正确
+- `401`: 缺少访问令牌
+- `401`: 访问令牌无效或已过期
+- `404`: 校友不存在
+- `409`: OpenID 已存在
+- `409`: 手机号已存在
+
+## 30. 更新校友状态
+
+`PATCH /api/alumni-users/:id/status`
+
+请求体：
+
+```json
+{
+  "status": 0
+}
+```
+
+错误情况：
+
+- `400`: 校友ID不正确
+- `400`: 状态参数不正确
+- `401`: 缺少访问令牌
+- `401`: 访问令牌无效或已过期
+- `404`: 校友不存在
+
+## 31. 保存学籍信息
+
+`PUT /api/alumni-users/:id/student-record`
+
+请求体：
+
+```json
+{
+  "school": "融川大学",
+  "college": "信息学院",
+  "major": "计算机科学与技术",
+  "className": "1801",
+  "studentNo": "20180001",
+  "enrollmentYear": 2018,
+  "graduationYear": 2022,
+  "status": 2
+}
+```
+
+说明：
+
+- 该接口为 upsert，首次调用创建，后续调用更新
+- 一个校友当前只维护一条学籍记录
+
+错误情况：
+
+- `400`: 校友ID不正确
+- `400`: 学校、专业和入学年份不能为空且格式正确
+- `400`: 毕业年份格式不正确
+- `400`: 学籍状态参数不正确
+- `401`: 缺少访问令牌
+- `401`: 访问令牌无效或已过期
+- `404`: 校友不存在
+
+## 32. 保存名片信息
+
+`PUT /api/alumni-users/:id/card`
+
+请求体：
+
+```json
+{
+  "slogan": "连接校友，连接机会",
+  "showPhone": 1,
+  "showWechat": 1,
+  "wechat": "zhangsan001",
+  "needApproval": 0,
+  "allowSearch": 1
+}
+```
+
+说明：
+
+- 该接口为 upsert，首次调用创建，后续调用更新
+- 一个校友当前只维护一张名片
+
+错误情况：
+
+- `400`: 校友ID不正确
+- `400`: 名片参数不正确
+- `401`: 缺少访问令牌
+- `401`: 访问令牌无效或已过期
+- `404`: 校友不存在
+
+## 33. 获取名片交换记录列表
+
+`GET /api/alumni-exchanges`
+
+Query 参数：
+
+- `current`: 页码，默认 `1`
+- `page`: 页码别名
+- `pageSize`: 每页条数，默认 `10`
+- `status`: 状态筛选，支持 `0`、`1`、`2`
+- `fromUserId`: 按发起人筛选
+- `toUserId`: 按接收人筛选
+
+成功响应：
+
+```json
+{
+  "code": 200,
+  "message": "获取名片交换记录成功",
+  "data": {
+    "list": [
+      {
+        "id": 1,
+        "from_user_id": 1,
+        "from_user_name": "张三",
+        "to_user_id": 2,
+        "to_user_name": "李四",
+        "status": 0,
+        "message": "想认识一下校友",
+        "created_at": "2026-04-08T12:10:00.000Z",
+        "updated_at": "2026-04-08T12:10:00.000Z"
+      }
+    ],
+    "total": 1,
+    "current": 1,
+    "pageSize": 10
+  }
+}
+```
+
+错误情况：
+
+- `400`: 分页参数不正确
+- `400`: 筛选参数不正确
+- `401`: 缺少访问令牌
+- `401`: 访问令牌无效或已过期
+
+## 34. 新增名片交换记录
+
+`POST /api/alumni-exchanges`
+
+请求体：
+
+```json
+{
+  "fromUserId": 1,
+  "toUserId": 2,
+  "status": 0,
+  "message": "想认识一下校友"
+}
+```
+
+说明：
+
+- `fromUserId` 和 `toUserId` 必填
+- 不允许自己给自己发起交换
+- 同一对 `fromUserId + toUserId` 不允许重复创建
+
+错误情况：
+
+- `400`: 交换用户参数不正确
+- `400`: 不能和自己交换名片
+- `400`: 交换状态参数不正确
+- `401`: 缺少访问令牌
+- `401`: 访问令牌无效或已过期
+- `404`: 交换用户不存在
+- `409`: 该交换记录已存在
+
+## 35. 更新名片交换状态
+
+`PATCH /api/alumni-exchanges/:id/status`
+
+请求体：
+
+```json
+{
+  "status": 1
+}
+```
+
+说明：
+
+- `status` 支持 `0`、`1`、`2`
+
+错误情况：
+
+- `400`: 交换记录ID不正确
+- `400`: 交换状态参数不正确
+- `401`: 缺少访问令牌
+- `401`: 访问令牌无效或已过期
+- `404`: 交换记录不存在

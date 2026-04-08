@@ -18,6 +18,11 @@
 - `sys_user_roles`
 - `sys_role_permissions`
 - `auth_refresh_sessions`
+- `sys_menus`
+- `alumni_users`
+- `alumni_student_records`
+- `alumni_cards`
+- `alumni_card_exchanges`
 
 这些表已经和当前代码中的模型查询保持一致，可直接支撑：
 
@@ -25,6 +30,67 @@
 - 用户列表与用户状态修改
 - 角色列表
 - 权限列表
+- 菜单管理
+- 校友列表、校友详情、校友状态维护
+- 学籍信息维护
+- 名片信息维护
+- 名片交换记录管理
+
+## 校友业务表说明
+
+### `alumni_users`
+
+校友主表，保存校友身份和基础资料。
+
+核心字段：
+
+- `open_id`：预留给小程序微信登录
+- `phone`：手机号，唯一
+- `name`：姓名
+- `avatar`：头像
+- `company`、`position`、`city`：职业与城市信息
+- `status`：账号状态，`1` 正常，`0` 禁用
+- `verified_status`：认证状态，`0` 未认证，`1` 认证中，`2` 已认证，`3` 认证失败
+- `allow_search`：是否允许被搜索
+
+### `alumni_student_records`
+
+校友学籍表，和 `alumni_users` 一对一。
+
+核心字段：
+
+- `school`：学校名称
+- `college`：学院
+- `major`：专业
+- `class_name`：班级
+- `student_no`：学号
+- `enrollment_year`：入学年份
+- `graduation_year`：毕业年份
+- `status`：学籍状态，`0` 待认领，`1` 已认领，`2` 已审核
+
+### `alumni_cards`
+
+校友名片表，和 `alumni_users` 一对一。
+
+核心字段：
+
+- `slogan`：名片标语
+- `show_phone`：是否展示手机号
+- `show_wechat`：是否展示微信号
+- `wechat`：微信号
+- `need_approval`：交换名片是否需要审核
+- `allow_search`：名片是否允许被搜索
+
+### `alumni_card_exchanges`
+
+名片交换记录表。
+
+核心字段：
+
+- `from_user_id`：发起人
+- `to_user_id`：接收人
+- `status`：交换状态，`0` 待处理，`1` 已通过，`2` 已拒绝
+- `message`：交换留言
 
 ## 默认种子数据
 

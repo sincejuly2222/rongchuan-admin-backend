@@ -124,6 +124,156 @@ CREATE TABLE IF NOT EXISTS `auth_refresh_sessions` (
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='刷新令牌会话表';
 
+CREATE TABLE IF NOT EXISTS `alumni_users` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '校友用户主键',
+  `open_id` VARCHAR(100) DEFAULT NULL COMMENT '微信OpenID',
+  `phone` VARCHAR(20) DEFAULT NULL COMMENT '手机号',
+  `name` VARCHAR(100) NOT NULL COMMENT '姓名',
+  `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像地址',
+  `gender` TINYINT DEFAULT NULL COMMENT '性别: 1男 2女 0未知',
+  `company` VARCHAR(150) DEFAULT NULL COMMENT '公司名称',
+  `position` VARCHAR(100) DEFAULT NULL COMMENT '职位',
+  `city` VARCHAR(100) DEFAULT NULL COMMENT '所在城市',
+  `bio` VARCHAR(500) DEFAULT NULL COMMENT '个人简介',
+  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 1正常 0禁用',
+  `verified_status` TINYINT NOT NULL DEFAULT 0 COMMENT '认证状态: 0未认证 1认证中 2已认证 3认证失败',
+  `allow_search` TINYINT NOT NULL DEFAULT 1 COMMENT '是否允许被搜索',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_alumni_users_open_id` (`open_id`),
+  UNIQUE KEY `uk_alumni_users_phone` (`phone`),
+  KEY `idx_alumni_users_name` (`name`),
+  KEY `idx_alumni_users_status` (`status`),
+  KEY `idx_alumni_users_verified_status` (`verified_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='校友用户表';
+
+CREATE TABLE IF NOT EXISTS `alumni_student_records` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '学籍记录主键',
+  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '校友用户ID',
+  `school` VARCHAR(150) NOT NULL COMMENT '学校名称',
+  `college` VARCHAR(150) DEFAULT NULL COMMENT '学院',
+  `major` VARCHAR(150) NOT NULL COMMENT '专业',
+  `class_name` VARCHAR(100) DEFAULT NULL COMMENT '班级',
+  `student_no` VARCHAR(50) DEFAULT NULL COMMENT '学号',
+  `enrollment_year` INT NOT NULL COMMENT '入学年份',
+  `graduation_year` INT DEFAULT NULL COMMENT '毕业年份',
+  `status` TINYINT NOT NULL DEFAULT 0 COMMENT '状态: 0待认领 1已认领 2已审核',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_alumni_student_records_user_id` (`user_id`),
+  KEY `idx_alumni_student_records_school_major` (`school`, `major`),
+  KEY `idx_alumni_student_records_enrollment_year` (`enrollment_year`),
+  CONSTRAINT `fk_alumni_student_records_user_id`
+    FOREIGN KEY (`user_id`) REFERENCES `alumni_users` (`id`)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='校友学籍表';
+
+CREATE TABLE IF NOT EXISTS `alumni_cards` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '名片主键',
+  `user_id` BIGINT UNSIGNED NOT NULL COMMENT '校友用户ID',
+  `slogan` VARCHAR(255) DEFAULT NULL COMMENT '名片标语',
+  `show_phone` TINYINT NOT NULL DEFAULT 0 COMMENT '是否展示手机号',
+  `show_wechat` TINYINT NOT NULL DEFAULT 0 COMMENT '是否展示微信号',
+  `wechat` VARCHAR(100) DEFAULT NULL COMMENT '微信号',
+  `need_approval` TINYINT NOT NULL DEFAULT 0 COMMENT '交换是否需要审核',
+  `allow_search` TINYINT NOT NULL DEFAULT 1 COMMENT '是否允许被搜索',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_alumni_cards_user_id` (`user_id`),
+  CONSTRAINT `fk_alumni_cards_user_id`
+    FOREIGN KEY (`user_id`) REFERENCES `alumni_users` (`id`)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='校友名片表';
+
+CREATE TABLE IF NOT EXISTS `alumni_card_exchanges` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '名片交换主键',
+  `from_user_id` BIGINT UNSIGNED NOT NULL COMMENT '发起人用户ID',
+  `to_user_id` BIGINT UNSIGNED NOT NULL COMMENT '接收人用户ID',
+  `status` TINYINT NOT NULL DEFAULT 0 COMMENT '状态: 0待处理 1已通过 2已拒绝',
+  `message` VARCHAR(255) DEFAULT NULL COMMENT '交换留言',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_alumni_card_exchanges_pair` (`from_user_id`, `to_user_id`),
+  KEY `idx_alumni_card_exchanges_to_user_id` (`to_user_id`),
+  KEY `idx_alumni_card_exchanges_status` (`status`),
+  CONSTRAINT `fk_alumni_card_exchanges_from_user_id`
+    FOREIGN KEY (`from_user_id`) REFERENCES `alumni_users` (`id`)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT `fk_alumni_card_exchanges_to_user_id`
+    FOREIGN KEY (`to_user_id`) REFERENCES `alumni_users` (`id`)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='校友名片交换表';
+
+CREATE TABLE IF NOT EXISTS `alumni_organizations` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '组织主键',
+  `name` VARCHAR(150) NOT NULL COMMENT '组织名称',
+  `type` VARCHAR(50) NOT NULL COMMENT '组织类型',
+  `principal` VARCHAR(100) DEFAULT NULL COMMENT '负责人',
+  `city` VARCHAR(100) DEFAULT NULL COMMENT '所在城市',
+  `member_count` INT NOT NULL DEFAULT 0 COMMENT '成员数量',
+  `pending_count` INT NOT NULL DEFAULT 0 COMMENT '待审核成员数量',
+  `active_count` INT NOT NULL DEFAULT 0 COMMENT '近期活跃活动数',
+  `founded_at` DATE DEFAULT NULL COMMENT '成立时间',
+  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 1运营中 0筹备中',
+  `description` VARCHAR(500) DEFAULT NULL COMMENT '组织说明',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_alumni_organizations_type` (`type`),
+  KEY `idx_alumni_organizations_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='校友组织表';
+
+CREATE TABLE IF NOT EXISTS `alumni_activities` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '活动主键',
+  `name` VARCHAR(150) NOT NULL COMMENT '活动名称',
+  `type` VARCHAR(50) NOT NULL COMMENT '活动类型',
+  `organization_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '主办组织ID',
+  `city` VARCHAR(100) DEFAULT NULL COMMENT '活动城市',
+  `venue` VARCHAR(255) DEFAULT NULL COMMENT '活动地点',
+  `start_time` DATETIME NOT NULL COMMENT '开始时间',
+  `end_time` DATETIME DEFAULT NULL COMMENT '结束时间',
+  `capacity` INT NOT NULL DEFAULT 0 COMMENT '活动容量',
+  `enrollments` INT NOT NULL DEFAULT 0 COMMENT '报名人数',
+  `status` TINYINT NOT NULL DEFAULT 0 COMMENT '状态: 0报名中 1进行中 2已结束',
+  `description` VARCHAR(1000) DEFAULT NULL COMMENT '活动说明',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_alumni_activities_type` (`type`),
+  KEY `idx_alumni_activities_status` (`status`),
+  KEY `idx_alumni_activities_start_time` (`start_time`),
+  KEY `idx_alumni_activities_organization_id` (`organization_id`),
+  CONSTRAINT `fk_alumni_activities_organization_id`
+    FOREIGN KEY (`organization_id`) REFERENCES `alumni_organizations` (`id`)
+    ON UPDATE CASCADE
+    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='校友活动表';
+
+CREATE TABLE IF NOT EXISTS `alumni_import_jobs` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '导入任务主键',
+  `name` VARCHAR(255) NOT NULL COMMENT '文件名称',
+  `type` VARCHAR(50) NOT NULL COMMENT '导入类型',
+  `operator_name` VARCHAR(100) NOT NULL COMMENT '执行人',
+  `status` TINYINT NOT NULL DEFAULT 0 COMMENT '状态: 0待确认 1校验中 2已完成',
+  `total_count` INT NOT NULL DEFAULT 0 COMMENT '总记录数',
+  `success_count` INT NOT NULL DEFAULT 0 COMMENT '成功数',
+  `failed_count` INT NOT NULL DEFAULT 0 COMMENT '失败数',
+  `error_details` JSON DEFAULT NULL COMMENT '错误详情',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_alumni_import_jobs_type` (`type`),
+  KEY `idx_alumni_import_jobs_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Excel导入任务表';
+
 INSERT INTO `sys_roles` (`id`, `role_name`, `role_code`, `description`, `status`)
 VALUES
   (1, '超级管理员', 'SUPER_ADMIN', '系统默认超级管理员角色', 1),
@@ -225,3 +375,174 @@ ON DUPLICATE KEY UPDATE
   `icon` = VALUES(`icon`),
   `sort_order` = VALUES(`sort_order`),
   `status` = VALUES(`status`);
+
+INSERT INTO `alumni_users` (
+  `id`,
+  `open_id`,
+  `phone`,
+  `name`,
+  `avatar`,
+  `gender`,
+  `company`,
+  `position`,
+  `city`,
+  `bio`,
+  `status`,
+  `verified_status`,
+  `allow_search`
+)
+VALUES
+  (1, 'wx_seed_zhangchen', '13812340001', '张晨', NULL, 1, '字节跳动', '高级前端工程师', '上海', '信息工程学院校友，关注技术分享与校友合作。', 1, 2, 1),
+  (2, 'wx_seed_lixin', '13912340002', '李欣', NULL, 2, '腾讯', '品牌经理', '深圳', '经济管理学院校友，长期参与校友活动策划。', 1, 2, 1),
+  (3, 'wx_seed_zhouhang', '13712340003', '周航', NULL, 1, '吉利汽车', '产品专家', '杭州', '机械工程学院校友，聚焦制造业创新。', 1, 1, 1),
+  (4, 'wx_seed_chenying', '13612340004', '陈莹', NULL, 2, '中伦律师事务所', '律师', '北京', '法学院校友，提供法律咨询支持。', 0, 3, 0)
+ON DUPLICATE KEY UPDATE
+  `open_id` = VALUES(`open_id`),
+  `phone` = VALUES(`phone`),
+  `name` = VALUES(`name`),
+  `avatar` = VALUES(`avatar`),
+  `gender` = VALUES(`gender`),
+  `company` = VALUES(`company`),
+  `position` = VALUES(`position`),
+  `city` = VALUES(`city`),
+  `bio` = VALUES(`bio`),
+  `status` = VALUES(`status`),
+  `verified_status` = VALUES(`verified_status`),
+  `allow_search` = VALUES(`allow_search`);
+
+INSERT INTO `alumni_student_records` (
+  `id`,
+  `user_id`,
+  `school`,
+  `college`,
+  `major`,
+  `class_name`,
+  `student_no`,
+  `enrollment_year`,
+  `graduation_year`,
+  `status`
+)
+VALUES
+  (1, 1, '融川大学', '信息工程学院', '计算机科学与技术', '计科 1801', '2018123401', 2018, 2022, 2),
+  (2, 2, '融川大学', '经济管理学院', '市场营销', '营销 1602', '2016110809', 2016, 2020, 2),
+  (3, 3, '融川大学', '机械工程学院', '车辆工程', '车辆 1401', '2014102218', 2014, 2018, 1),
+  (4, 4, '融川大学', '法学院', '法学', '法学 1202', '2012050906', 2012, 2016, 0)
+ON DUPLICATE KEY UPDATE
+  `school` = VALUES(`school`),
+  `college` = VALUES(`college`),
+  `major` = VALUES(`major`),
+  `class_name` = VALUES(`class_name`),
+  `student_no` = VALUES(`student_no`),
+  `enrollment_year` = VALUES(`enrollment_year`),
+  `graduation_year` = VALUES(`graduation_year`),
+  `status` = VALUES(`status`);
+
+INSERT INTO `alumni_cards` (
+  `id`,
+  `user_id`,
+  `slogan`,
+  `show_phone`,
+  `show_wechat`,
+  `wechat`,
+  `need_approval`,
+  `allow_search`
+)
+VALUES
+  (1, 1, '技术同频，合作共进', 1, 1, 'zhangchen-tech', 0, 1),
+  (2, 2, '品牌连接校友，活动创造价值', 1, 1, 'lixin-brand', 0, 1),
+  (3, 3, '制造业创新与校友资源共振', 0, 1, 'zhouhang-auto', 1, 1),
+  (4, 4, '法律服务与校友公益同行', 0, 0, NULL, 1, 0)
+ON DUPLICATE KEY UPDATE
+  `slogan` = VALUES(`slogan`),
+  `show_phone` = VALUES(`show_phone`),
+  `show_wechat` = VALUES(`show_wechat`),
+  `wechat` = VALUES(`wechat`),
+  `need_approval` = VALUES(`need_approval`),
+  `allow_search` = VALUES(`allow_search`);
+
+INSERT INTO `alumni_organizations` (
+  `id`,
+  `name`,
+  `type`,
+  `principal`,
+  `city`,
+  `member_count`,
+  `pending_count`,
+  `active_count`,
+  `founded_at`,
+  `status`,
+  `description`
+)
+VALUES
+  (1, '校友总会', '校友会', '王海明', '南京', 18240, 32, 28, '2012-09-01', 1, '负责全校校友工作的统筹协调。'),
+  (2, '上海校友会', '地方组织', '周倩', '上海', 3260, 11, 8, '2016-05-20', 1, '面向上海及周边校友的地方组织。'),
+  (3, '数字经济行业分会', '行业组织', '李振', '深圳', 840, 18, 6, '2024-11-18', 0, '聚焦数字经济与产业合作。'),
+  (4, '信息工程学院校友分会', '学院分会', '赵雪', '南京', 5120, 9, 14, '2018-10-12', 1, '信息工程学院校友专属组织。')
+ON DUPLICATE KEY UPDATE
+  `name` = VALUES(`name`),
+  `type` = VALUES(`type`),
+  `principal` = VALUES(`principal`),
+  `city` = VALUES(`city`),
+  `member_count` = VALUES(`member_count`),
+  `pending_count` = VALUES(`pending_count`),
+  `active_count` = VALUES(`active_count`),
+  `founded_at` = VALUES(`founded_at`),
+  `status` = VALUES(`status`),
+  `description` = VALUES(`description`);
+
+INSERT INTO `alumni_activities` (
+  `id`,
+  `name`,
+  `type`,
+  `organization_id`,
+  `city`,
+  `venue`,
+  `start_time`,
+  `end_time`,
+  `capacity`,
+  `enrollments`,
+  `status`,
+  `description`
+)
+VALUES
+  (1, '2026 校友创新论坛', '论坛', 1, '上海', '徐汇校区报告厅', '2026-05-18 14:00:00', '2026-05-18 18:00:00', 400, 286, 0, '聚焦创新创业与校友资源联动。'),
+  (2, '长三角校友创业沙龙', '沙龙', 2, '上海', '漕河泾科创中心', '2026-04-20 19:00:00', '2026-04-20 21:30:00', 120, 94, 0, '长三角校友创业项目交流沙龙。'),
+  (3, '校庆返校日', '返校日', 1, '南京', '主校区', '2026-04-12 09:00:00', '2026-04-12 17:00:00', 500, 520, 1, '校庆返校主题活动。'),
+  (4, '校友专场招聘会', '招聘会', 4, '杭州', '体育馆', '2026-03-28 10:00:00', '2026-03-28 17:00:00', 800, 660, 2, '面向校友企业与在校生的专场招聘会。')
+ON DUPLICATE KEY UPDATE
+  `name` = VALUES(`name`),
+  `type` = VALUES(`type`),
+  `organization_id` = VALUES(`organization_id`),
+  `city` = VALUES(`city`),
+  `venue` = VALUES(`venue`),
+  `start_time` = VALUES(`start_time`),
+  `end_time` = VALUES(`end_time`),
+  `capacity` = VALUES(`capacity`),
+  `enrollments` = VALUES(`enrollments`),
+  `status` = VALUES(`status`),
+  `description` = VALUES(`description`);
+
+INSERT INTO `alumni_import_jobs` (
+  `id`,
+  `name`,
+  `type`,
+  `operator_name`,
+  `status`,
+  `total_count`,
+  `success_count`,
+  `failed_count`,
+  `error_details`
+)
+VALUES
+  (1, '2026 春季校友资料导入.xlsx', 'alumni', '系统管理员', 2, 320, 312, 8, JSON_ARRAY(JSON_OBJECT('row', 16, 'message', '手机号已存在'), JSON_OBJECT('row', 45, 'message', '姓名不能为空'))),
+  (2, '学籍档案补录-信息学院.xlsx', 'student', '教务老师', 0, 131, 128, 3, JSON_ARRAY(JSON_OBJECT('row', 9, 'message', '专业不能为空'))),
+  (3, '华东地区校友更新.xlsx', 'alumni', '区域运营', 1, 0, 0, 0, JSON_ARRAY())
+ON DUPLICATE KEY UPDATE
+  `name` = VALUES(`name`),
+  `type` = VALUES(`type`),
+  `operator_name` = VALUES(`operator_name`),
+  `status` = VALUES(`status`),
+  `total_count` = VALUES(`total_count`),
+  `success_count` = VALUES(`success_count`),
+  `failed_count` = VALUES(`failed_count`),
+  `error_details` = VALUES(`error_details`);

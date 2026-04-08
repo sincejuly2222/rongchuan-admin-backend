@@ -1,6 +1,6 @@
 # rongchuanAdminBackend
 
-融川后台管理系统后端服务，基于 Node.js、Express 和 MySQL 构建，提供认证、用户、角色、权限、菜单等后台基础能力。
+融川后台管理系统后端服务，基于 Node.js、Express 和 MySQL 构建，提供认证、用户、角色、权限、菜单，以及校友业务管理等后台能力。
 
 ## README 是干嘛的
 
@@ -15,7 +15,8 @@
 如果把接口明细都放在 README 里，会过长且不方便维护，所以本仓库的职责划分建议是：
 
 - `README.md`：项目概览、启动方式、联调入口、文档索引
-- `docs/auth-api.md`：详细接口文档
+- `docs/auth-api.md`：后台管理端接口文档
+- `docs/miniapp-api.md`：小程序端接口规划文档
 - `database/README.md`：数据库初始化与表结构说明
 
 ## 项目概览
@@ -30,6 +31,10 @@
 - 角色权限绑定
 - 权限管理
 - 菜单管理
+- 校友管理
+- 学籍管理
+- 校友名片管理
+- 名片交换记录管理
 
 服务启动后默认监听：
 
@@ -196,6 +201,10 @@ REFRESH_TOKEN_SECRET=replace_with_your_refresh_secret
 - `sys_role_permissions`
 - `auth_refresh_sessions`
 - `sys_menus`
+- `alumni_users`
+- `alumni_student_records`
+- `alumni_cards`
+- `alumni_card_exchanges`
 
 默认会写入基础种子数据，包括：
 
@@ -417,6 +426,22 @@ axios.get('http://localhost:3000/api/auth/me', {
 - `PUT /api/users/:id`
 - `PATCH /api/users/:id/status`
 
+### 校友管理
+
+- `GET /api/alumni-users`
+- `POST /api/alumni-users`
+- `GET /api/alumni-users/:id`
+- `PUT /api/alumni-users/:id`
+- `PATCH /api/alumni-users/:id/status`
+- `PUT /api/alumni-users/:id/student-record`
+- `PUT /api/alumni-users/:id/card`
+
+### 名片交换管理
+
+- `GET /api/alumni-exchanges`
+- `POST /api/alumni-exchanges`
+- `PATCH /api/alumni-exchanges/:id/status`
+
 ### 角色管理
 
 - `GET /api/roles`
@@ -442,7 +467,8 @@ axios.get('http://localhost:3000/api/auth/me', {
 
 完整接口字段、请求体和返回示例请查看：
 
-- [`docs/auth-api.md`](./docs/auth-api.md)
+- 后台管理端：[`docs/auth-api.md`](./docs/auth-api.md)
+- 小程序端规划：[`docs/miniapp-api.md`](./docs/miniapp-api.md)
 
 ## 项目目录结构
 
@@ -503,5 +529,6 @@ npm run db:test
 ## 文档索引
 
 - 项目入口说明：[`README.md`](./README.md)
-- 接口文档：[`docs/auth-api.md`](./docs/auth-api.md)
+- 后台管理端接口文档：[`docs/auth-api.md`](./docs/auth-api.md)
+- 小程序端接口规划文档：[`docs/miniapp-api.md`](./docs/miniapp-api.md)
 - 数据库说明：[`database/README.md`](./database/README.md)
