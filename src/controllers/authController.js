@@ -1,8 +1,10 @@
 // Authentication controller: handles registration, login, token rotation, logout, and current-user queries.
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const blogModel = require('../models/blogModel');
 const userModel = require('../models/userModel');
 const refreshSessionModel = require('../models/refreshSessionModel');
+const menuModel = require('../models/menuModel');
 const env = require('../config/env');
 const {
   buildAccessTokenPayload,
@@ -34,6 +36,16 @@ function buildCurrentUserProfile(user) {
     email: user.email,
     phone: user.phone,
     avatar: user.avatar,
+    title: user.title,
+    bio: user.bio,
+    gender: user.gender,
+    location: user.location,
+    website: user.website,
+    birthday: user.birthday,
+    startWorkDate: user.start_work_date,
+    company: user.company,
+    department: user.department,
+    position: user.position,
     status: user.status,
     lastLoginAt: user.last_login_at,
     createdAt: user.created_at,
@@ -45,6 +57,105 @@ function buildCurrentUserProfile(user) {
           .map((value) => value.trim())
           .filter(Boolean)
       : [],
+  };
+}
+
+function buildMenuTree(menus) {
+  const menuMap = new Map();
+
+  menus
+    .filter((menu) => menu.status === 1)
+    .forEach((menu) => {
+      menuMap.set(menu.id, {
+        ...menu,
+        children: [],
+      });
+    });
+
+  const roots = [];
+
+  menuMap.forEach((menu) => {
+    if (menu.parent_id > 0 && menuMap.has(menu.parent_id)) {
+      menuMap.get(menu.parent_id).children.push(menu);
+      return;
+    }
+
+    roots.push(menu);
+  });
+
+  return roots;
+}
+
+function buildHomeBlogList(blogs) {
+  return blogs.map((blog) => ({
+    id: blog.id,
+    title: blog.title,
+    summary: blog.summary,
+    coverImage: blog.cover_image,
+    categoryId: blog.category_id,
+    category: blog.category_id
+      ? {
+          id: blog.category_id,
+          name: blog.category_name,
+          slug: blog.category_slug,
+          description: blog.category_description,
+          articleCount: blog.category_article_count ?? 0,
+        }
+      : null,
+    tags: blog.tag_list,
+    viewCount: blog.view_count,
+    likeCount: blog.like_count,
+    author: {
+      id: blog.author_id,
+      name: blog.author_name,
+      avatar: blog.author_avatar,
+    },
+    publishedAt: blog.published_at,
+    createdAt: blog.created_at,
+  }));
+}
+
+function buildCurrentUserViews(userProfile, blogs = []) {
+  const displayName = userProfile.name || userProfile.username;
+  const primaryRole = userProfile.roleNames[0] || null;
+  const titleParts = [userProfile.company, userProfile.department, userProfile.position].filter(Boolean);
+
+  return {
+    profile: userProfile,
+    home: {
+      displayName,
+      greeting: `你好，${displayName}`,
+      avatar: userProfile.avatar,
+      title: userProfile.title,
+      subtitle: titleParts.join(' / ') || primaryRole,
+      company: userProfile.company,
+      department: userProfile.department,
+      position: userProfile.position,
+      roleNames: userProfile.roleNames,
+      blogs: buildHomeBlogList(blogs),
+    },
+    navbar: {
+      username: userProfile.username,
+      displayName,
+      avatar: userProfile.avatar,
+      title: userProfile.title,
+      primaryRole,
+      roleNames: userProfile.roleNames,
+    },
+  };
+}
+
+async function buildAuthBootstrapData(user) {
+  const userProfile = buildCurrentUserProfile(user);
+  const menus = await menuModel.listAllMenus();
+  const blogs = await blogModel.listHomeBlogs(6);
+
+  return {
+    user: userProfile,
+    views: buildCurrentUserViews(userProfile, blogs),
+    navigation: {
+      menuTree: buildMenuTree(menus),
+    },
   };
 }
 
@@ -209,7 +320,7 @@ async function login(req, res, next) {
       message: '登录成功',
       data: {
         ...tokenPayload,
-        user: buildCurrentUserProfile(currentUser || user),
+        ...(await buildAuthBootstrapData(currentUser || user)),
       },
     });
   } catch (error) {
@@ -320,9 +431,7 @@ async function getCurrentUser(req, res, next) {
 
     return sendSuccess(res, {
       message: '获取当前用户成功',
-      data: {
-        user: buildCurrentUserProfile(user),
-      },
+      data: await buildAuthBootstrapData(user),
     });
   } catch (error) {
     return next(error);
@@ -336,6 +445,16 @@ async function updateCurrentUserProfile(req, res, next) {
     const email = req.body.email ? String(req.body.email).trim().toLowerCase() : '';
     const phone = normalizeOptionalString(req.body.phone);
     const avatar = normalizeOptionalString(req.body.avatar);
+    const title = normalizeOptionalString(req.body.title);
+    const bio = normalizeOptionalString(req.body.bio);
+    const gender = normalizeOptionalString(req.body.gender);
+    const location = normalizeOptionalString(req.body.location);
+    const website = normalizeOptionalString(req.body.website);
+    const birthday = normalizeOptionalString(req.body.birthday);
+    const startWorkDate = normalizeOptionalString(req.body.startWorkDate);
+    const company = normalizeOptionalString(req.body.company);
+    const department = normalizeOptionalString(req.body.department);
+    const position = normalizeOptionalString(req.body.position);
 
     if (!name || !email) {
       return sendError(res, {
@@ -372,13 +491,41 @@ async function updateCurrentUserProfile(req, res, next) {
       email,
       phone,
       avatar,
+      title,
+      bio,
+      gender,
+      location,
+      website,
+      birthday,
+      startWorkDate,
+      company,
+      department,
+      position,
     });
 
     return sendSuccess(res, {
       message: '更新个人信息成功',
-      data: {
-        user: buildCurrentUserProfile(updatedUser),
-      },
+      data: await buildAuthBootstrapData(updatedUser),
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getAuthBootstrap(req, res, next) {
+  try {
+    const user = await userModel.findManagedUserById(req.user.userId);
+
+    if (!user) {
+      return sendError(res, {
+        statusCode: 404,
+        message: '用户不存在',
+      });
+    }
+
+    return sendSuccess(res, {
+      message: '获取初始化数据成功',
+      data: await buildAuthBootstrapData(user),
     });
   } catch (error) {
     return next(error);
@@ -390,6 +537,7 @@ module.exports = {
   login,
   refresh,
   logout,
+  getAuthBootstrap,
   getCurrentUser,
   updateCurrentUserProfile,
 };

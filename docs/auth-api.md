@@ -60,6 +60,16 @@ Authorization: Bearer <accessToken>
   "email": "admin@rongchuan.local",
   "phone": "13800000000",
   "avatar": null,
+  "title": "系统运营负责人",
+  "bio": "负责融川后台系统的账号管理、权限配置和运营支持。",
+  "gender": "保密",
+  "location": "中国·南京",
+  "website": "https://rongchuan.local",
+  "birthday": "1995-06-21",
+  "startWorkDate": "2018-10",
+  "company": "融川科技",
+  "department": "平台研发部",
+  "position": "系统管理员",
   "status": 1,
   "lastLoginAt": "2026-04-03T08:49:54.000Z",
   "createdAt": "2026-04-03T06:21:10.000Z",
@@ -68,6 +78,45 @@ Authorization: Bearer <accessToken>
   "roleNames": ["超级管理员"]
 }
 ```
+
+`/api/auth/login`、`/api/auth/bootstrap`、`/api/auth/me`、`/api/auth/profile` 还会额外返回：
+
+```json
+{
+  "views": {
+    "profile": {},
+    "home": {
+      "displayName": "系统管理员",
+      "greeting": "你好，系统管理员",
+      "avatar": null,
+      "title": "系统运营负责人",
+      "subtitle": "融川科技 / 平台研发部 / 系统管理员",
+      "company": "融川科技",
+      "department": "平台研发部",
+      "position": "系统管理员",
+      "roleNames": ["超级管理员"]
+    },
+    "navbar": {
+      "username": "admin",
+      "displayName": "系统管理员",
+      "avatar": null,
+      "title": "系统运营负责人",
+      "primaryRole": "超级管理员",
+      "roleNames": ["超级管理员"]
+    }
+  },
+  "navigation": {
+    "menuTree": []
+  }
+}
+```
+
+说明：
+
+- `views.profile` 与 `user` 内容一致，可直接给个人中心使用
+- `views.home` 可直接给首页头部、欢迎区使用
+- `views.navbar` 可直接给顶部导航栏用户信息使用
+- `navigation.menuTree` 为已启用菜单树，供导航栏和侧边菜单渲染
 
 ## 1. 健康检查
 
@@ -196,7 +245,52 @@ Set-Cookie: refreshToken=...; HttpOnly; Path=/api/auth; SameSite=Lax
 - `409`: 用户名已存在
 - `409`: 邮箱已存在
 
-## 4. 获取当前登录用户
+## 4. 获取初始化数据
+
+`GET /api/auth/bootstrap`
+
+请求头：
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+说明：
+
+- 用于后台首页、导航栏、个人中心初始化取数
+- 返回当前用户、首页视图、导航栏视图以及已启用菜单树
+
+成功响应：
+
+```json
+{
+  "code": 200,
+  "message": "获取初始化数据成功",
+  "data": {
+    "user": {},
+    "views": {
+      "profile": {},
+      "home": {},
+      "navbar": {}
+    },
+    "navigation": {
+      "menuTree": []
+    }
+  }
+}
+```
+
+说明：
+
+- 返回结构与 `/api/auth/bootstrap` 一致，可直接刷新个人中心、首页和导航栏显示
+
+错误情况：
+
+- `401`: 缺少访问令牌
+- `401`: 访问令牌无效或已过期
+- `404`: 用户不存在
+
+## 5. 获取当前登录用户
 
 `GET /api/auth/me`
 
@@ -237,7 +331,7 @@ Authorization: Bearer <accessToken>
 - `401`: 访问令牌无效或已过期
 - `404`: 用户不存在
 
-## 5. 更新当前登录人个人信息
+## 6. 更新当前登录人个人信息
 
 `PUT /api/auth/profile`
 
@@ -255,15 +349,25 @@ Content-Type: application/json
   "name": "系统管理员",
   "email": "admin@rongchuan.local",
   "phone": "13800000000",
-  "avatar": "https://example.com/avatar.png"
+  "avatar": "https://example.com/avatar.png",
+  "title": "系统运营负责人",
+  "bio": "负责融川后台系统的账号管理、权限配置和运营支持。",
+  "gender": "保密",
+  "location": "中国·南京",
+  "website": "https://rongchuan.local",
+  "birthday": "1995-06-21",
+  "startWorkDate": "2018-10",
+  "company": "融川科技",
+  "department": "平台研发部",
+  "position": "系统管理员"
 }
 ```
 
 说明：
 
 - 只能更新当前登录人的个人资料
-- 当前仅支持修改 `name`、`email`、`phone`、`avatar`
-- `phone`、`avatar` 允许传空字符串，后端会转为 `null`
+- 当前支持修改 `name`、`email`、`phone`、`avatar`、`title`、`bio`、`gender`、`location`、`website`、`birthday`、`startWorkDate`、`company`、`department`、`position`
+- `phone`、`avatar` 以及其他扩展字段允许传空字符串，后端会转为 `null`
 - `username`、`roleIds`、`roleNames` 不通过该接口修改
 
 成功响应：
@@ -300,7 +404,7 @@ Content-Type: application/json
 - `404`: 用户不存在
 - `409`: 邮箱已存在
 
-## 6. 刷新 Access Token
+## 7. 刷新 Access Token
 
 `POST /api/auth/refresh`
 
@@ -1199,6 +1303,50 @@ Path 参数：
 }
 ```
 
+`/api/auth/login`、`/api/auth/bootstrap`、`/api/auth/me`、`/api/auth/profile` 现在还会额外返回：
+
+```json
+{
+  "views": {
+    "profile": {},
+    "home": {
+      "displayName": "系统管理员",
+      "greeting": "你好，系统管理员",
+      "avatar": null,
+      "title": "系统运营负责人",
+      "subtitle": "融川科技 / 平台研发部 / 系统管理员",
+      "company": "融川科技",
+      "department": "平台研发部",
+      "position": "系统管理员",
+      "roleNames": ["超级管理员"]
+    },
+    "navbar": {
+      "username": "admin",
+      "displayName": "系统管理员",
+      "avatar": null,
+      "title": "系统运营负责人",
+      "primaryRole": "超级管理员",
+      "roleNames": ["超级管理员"]
+    }
+  },
+  "navigation": {
+    "menuTree": []
+  }
+}
+```
+
+说明：
+
+- 更新成功后会同步返回最新的 `user`、`views`、`navigation`
+- 前端可直接用返回结果刷新个人中心、首页欢迎信息和导航栏头像/昵称
+
+说明：
+
+- `views.profile` 与 `user` 内容一致，可直接给个人中心使用
+- `views.home` 可直接给首页头部、欢迎区使用
+- `views.navbar` 可直接给顶部导航栏用户信息使用
+- `navigation.menuTree` 为已启用菜单树，供导航栏和侧边菜单渲染
+
 错误情况：
 
 - `401`: 缺少访问令牌
@@ -1235,6 +1383,188 @@ Path 参数：
 - `401`: 缺少访问令牌
 - `401`: 访问令牌无效或已过期
 - `404`: 菜单不存在
+
+## 博客内容管理
+
+### 获取博客列表
+
+`GET /api/blogs`
+
+请求头：
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+说明：
+
+- 不登录也可以访问，但公开访问时只返回 `status = 1` 的已发布博客
+- 登录后可继续通过 `status = 0` 查看自己的草稿列表
+
+查询参数说明：
+
+- `current`: 页码，默认 `1`
+- `pageSize`: 每页数量，默认 `10`
+- `keyword`: 可选，按标题、摘要、正文模糊搜索
+- `status`: 可选，博客状态，`0` 为草稿，`1` 为已发布；默认返回已发布内容
+
+成功响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "获取博客列表成功",
+  "data": {
+    "list": [
+      {
+        "id": 1,
+        "title": "React 性能优化实践",
+        "summary": "从渲染链路出发梳理页面卡顿排查方式",
+        "coverImage": null,
+        "tags": ["React", "性能优化"],
+        "status": 1,
+        "viewCount": 128,
+        "likeCount": 16,
+        "author": {
+          "id": 1,
+          "name": "系统管理员",
+          "avatar": null
+        },
+        "publishedAt": "2026-04-11T09:20:00.000Z",
+        "createdAt": "2026-04-11T09:20:00.000Z",
+        "updatedAt": "2026-04-11T09:20:00.000Z"
+      }
+    ],
+    "total": 1,
+    "current": 1,
+    "pageSize": 10
+  }
+}
+```
+
+错误情况：
+
+- `400`: 分页参数不正确
+- `400`: 状态参数不正确
+
+### 获取博客详情
+
+`GET /api/blogs/:id`
+
+说明：
+
+- 仅返回已发布博客详情
+- 调用成功后会自动增加一次阅读数
+- 不需要登录即可访问
+
+错误情况：
+
+- `400`: 博客ID不正确
+- `404`: 博客不存在
+
+### 获取博客编辑详情
+
+`GET /api/blogs/:id/edit`
+
+说明：
+
+- 仅博客作者本人可访问
+- 支持读取草稿内容
+- 不会增加阅读数
+
+错误情况：
+
+- `400`: 博客ID不正确
+- `403`: 无权操作当前博客
+- `404`: 博客不存在
+
+### 新建博客
+
+`POST /api/blogs`
+
+请求体示例：
+
+```json
+{
+  "title": "我的第一篇博客",
+  "content": "# 标题\\n这里是正文内容",
+  "summary": "文章摘要",
+  "tags": ["前端", "React"],
+  "status": 1,
+  "coverImage": null
+}
+```
+
+字段说明：
+
+- `title`: 必填，博客标题
+- `content`: 必填，博客正文，支持 Markdown
+- `summary`: 可选，摘要；不传时后端自动从正文截取
+- `tags`: 可选，字符串数组
+- `status`: 可选，`0` 为草稿，`1` 为发布；默认 `1`
+- `coverImage`: 可选，封面图地址
+
+错误情况：
+
+- `400`: 博客标题和内容不能为空
+- `400`: 状态参数不正确
+
+### 更新博客
+
+`PUT /api/blogs/:id`
+
+说明：
+
+- 仅博客作者本人可操作
+- 支持直接保存草稿或更新并发布
+
+错误情况：
+
+- `400`: 博客ID不正确
+- `400`: 博客标题和内容不能为空
+- `400`: 状态参数不正确
+- `403`: 无权操作当前博客
+- `404`: 博客不存在
+
+### 更新博客状态
+
+`PATCH /api/blogs/:id/status`
+
+请求体示例：
+
+```json
+{
+  "status": 0
+}
+```
+
+说明：
+
+- 仅博客作者本人可操作
+- `status: 0` 表示撤回为草稿
+- `status: 1` 表示重新发布
+
+错误情况：
+
+- `400`: 博客ID不正确
+- `400`: 状态参数不正确
+- `403`: 无权操作当前博客
+- `404`: 博客不存在
+
+### 删除博客
+
+`DELETE /api/blogs/:id`
+
+说明：
+
+- 仅博客作者本人可操作
+- 当前用于删除草稿或作者自己的博客内容
+
+错误情况：
+
+- `400`: 博客ID不正确
+- `403`: 无权操作当前博客
+- `404`: 博客不存在
 
 ## 26. 获取校友列表
 
@@ -1655,3 +1985,171 @@ Query 参数：
 - `401`: 缺少访问令牌
 - `401`: 访问令牌无效或已过期
 - `404`: 交换记录不存在
+
+---
+
+## Appendix A. Full Admin API Route Index
+
+This appendix lists every route currently mounted under `/api`.
+
+### Health
+
+- `GET /api/health`
+
+### Auth
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
+- `GET /api/auth/bootstrap`
+- `GET /api/auth/me`
+- `PUT /api/auth/profile`
+
+### Users
+
+- `GET /api/users`
+- `POST /api/users`
+- `PUT /api/users/:id`
+- `PATCH /api/users/:id/status`
+
+### Roles
+
+- `GET /api/roles`
+- `POST /api/roles`
+- `PUT /api/roles/:id`
+- `GET /api/roles/:id/permissions`
+- `PUT /api/roles/:id/permissions`
+
+### Permissions
+
+- `GET /api/permissions`
+- `POST /api/permissions`
+- `PUT /api/permissions/:id`
+
+### Menus
+
+- `GET /api/menus`
+- `GET /api/menus/tree`
+- `POST /api/menus`
+- `PUT /api/menus/:id`
+- `PATCH /api/menus/:id/status`
+- `DELETE /api/menus/:id`
+
+### Activities
+
+- `GET /api/activities`
+- `POST /api/activities`
+- `PUT /api/activities/:id`
+- `PATCH /api/activities/:id/status`
+
+### Organizations
+
+- `GET /api/organizations`
+- `POST /api/organizations`
+- `PUT /api/organizations/:id`
+- `PATCH /api/organizations/:id/status`
+
+### Student Records
+
+- `GET /api/student-records`
+- `PATCH /api/student-records/:id/status`
+
+### Import Jobs
+
+- `GET /api/import-jobs`
+- `POST /api/import-jobs/upload`
+
+### Alumni Users
+
+- `GET /api/alumni-users`
+- `POST /api/alumni-users`
+- `GET /api/alumni-users/:id`
+- `PUT /api/alumni-users/:id`
+- `PATCH /api/alumni-users/:id/status`
+- `PUT /api/alumni-users/:id/student-record`
+- `PUT /api/alumni-users/:id/card`
+
+### Alumni Exchanges
+
+- `GET /api/alumni-exchanges`
+- `POST /api/alumni-exchanges`
+- `PATCH /api/alumni-exchanges/:id/status`
+
+### Blog Categories and Blogs
+
+- `GET /api/blogs/categories`
+- `GET /api/blogs/categories/manage`
+- `POST /api/blogs/categories`
+- `PUT /api/blogs/categories/:id`
+- `DELETE /api/blogs/categories/:id`
+- `PATCH /api/blogs/categories/sort`
+- `GET /api/blogs`
+- `GET /api/blogs/:id`
+- `GET /api/blogs/:id/edit`
+- `POST /api/blogs`
+- `PUT /api/blogs/:id`
+- `PATCH /api/blogs/:id/status`
+- `DELETE /api/blogs/:id`
+
+### Blog Comments
+
+- `GET /api/blog-comments`
+- `PATCH /api/blog-comments/:id`
+- `DELETE /api/blog-comments/:id`
+
+### Public Proxy APIs
+
+- `GET /api/juejin/hot-frontend`
+
+## Appendix B. Public Proxy API Details
+
+### Get Juejin Frontend Hot Rank
+
+`GET /api/juejin/hot-frontend`
+
+Description:
+
+- Public endpoint.
+- No authentication required.
+- Server-side proxy for Juejin frontend hot articles.
+- Intended for homepage recommendation modules and other read-only displays.
+
+Success response example:
+
+```json
+{
+  "code": 200,
+  "message": "获取掘金前端热榜成功",
+  "data": {
+    "list": [
+      {
+        "id": "7624882437116428303",
+        "title": "AI 时代的管理后台框架，应该是什么样子？",
+        "authorName": "Hooray",
+        "viewCount": 6610,
+        "likeCount": 68,
+        "commentCount": 20,
+        "hotRank": 3762,
+        "url": "https://juejin.cn/post/7624882437116428303"
+      }
+    ]
+  }
+}
+```
+
+Field notes:
+
+- `id`: Juejin article id.
+- `title`: article title.
+- `authorName`: author display name.
+- `viewCount`: current view count from Juejin.
+- `likeCount`: current like count from Juejin.
+- `commentCount`: current comment count from Juejin.
+- `hotRank`: hot rank score returned by Juejin.
+- `url`: direct Juejin article URL.
+
+Error cases:
+
+- `502`: upstream Juejin request failed.
+- `500`: unexpected server error.

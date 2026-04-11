@@ -15,6 +15,16 @@ CREATE TABLE IF NOT EXISTS `sys_users` (
   `email` VARCHAR(100) NOT NULL COMMENT '邮箱',
   `phone` VARCHAR(20) DEFAULT NULL COMMENT '手机号',
   `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像地址',
+  `title` VARCHAR(100) DEFAULT NULL COMMENT '个人头衔',
+  `bio` VARCHAR(500) DEFAULT NULL COMMENT '个人简介',
+  `gender` VARCHAR(20) DEFAULT NULL COMMENT '性别',
+  `location` VARCHAR(100) DEFAULT NULL COMMENT '所在地区',
+  `website` VARCHAR(255) DEFAULT NULL COMMENT '个人主页',
+  `birthday` DATE DEFAULT NULL COMMENT '出生日期',
+  `start_work_date` VARCHAR(7) DEFAULT NULL COMMENT '开始工作年月',
+  `company` VARCHAR(150) DEFAULT NULL COMMENT '公司名称',
+  `department` VARCHAR(100) DEFAULT NULL COMMENT '所属部门',
+  `position` VARCHAR(100) DEFAULT NULL COMMENT '岗位',
   `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 1启用 0禁用',
   `last_login_at` DATETIME DEFAULT NULL COMMENT '最后登录时间',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -24,6 +34,18 @@ CREATE TABLE IF NOT EXISTS `sys_users` (
   UNIQUE KEY `uk_sys_users_email` (`email`),
   KEY `idx_sys_users_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='后台用户表';
+
+ALTER TABLE `sys_users`
+  ADD COLUMN IF NOT EXISTS `title` VARCHAR(100) DEFAULT NULL COMMENT '个人头衔' AFTER `avatar`,
+  ADD COLUMN IF NOT EXISTS `bio` VARCHAR(500) DEFAULT NULL COMMENT '个人简介' AFTER `title`,
+  ADD COLUMN IF NOT EXISTS `gender` VARCHAR(20) DEFAULT NULL COMMENT '性别' AFTER `bio`,
+  ADD COLUMN IF NOT EXISTS `location` VARCHAR(100) DEFAULT NULL COMMENT '所在地区' AFTER `gender`,
+  ADD COLUMN IF NOT EXISTS `website` VARCHAR(255) DEFAULT NULL COMMENT '个人主页' AFTER `location`,
+  ADD COLUMN IF NOT EXISTS `birthday` DATE DEFAULT NULL COMMENT '出生日期' AFTER `website`,
+  ADD COLUMN IF NOT EXISTS `start_work_date` VARCHAR(7) DEFAULT NULL COMMENT '开始工作年月' AFTER `birthday`,
+  ADD COLUMN IF NOT EXISTS `company` VARCHAR(150) DEFAULT NULL COMMENT '公司名称' AFTER `start_work_date`,
+  ADD COLUMN IF NOT EXISTS `department` VARCHAR(100) DEFAULT NULL COMMENT '所属部门' AFTER `company`,
+  ADD COLUMN IF NOT EXISTS `position` VARCHAR(100) DEFAULT NULL COMMENT '岗位' AFTER `department`;
 
 CREATE TABLE IF NOT EXISTS `sys_roles` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '角色主键',
@@ -123,6 +145,50 @@ CREATE TABLE IF NOT EXISTS `auth_refresh_sessions` (
     ON UPDATE CASCADE
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='刷新令牌会话表';
+
+CREATE TABLE IF NOT EXISTS `sys_blog_categories` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '博客分类主键',
+  `name` VARCHAR(100) NOT NULL COMMENT '分类名称',
+  `slug` VARCHAR(120) DEFAULT NULL COMMENT '分类标识',
+  `description` VARCHAR(500) DEFAULT NULL COMMENT '分类描述',
+  `sort_order` INT NOT NULL DEFAULT 0 COMMENT '排序值',
+  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态 1启用 0停用',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_sys_blog_categories_name` (`name`),
+  UNIQUE KEY `uk_sys_blog_categories_slug` (`slug`),
+  KEY `idx_sys_blog_categories_status_sort` (`status`, `sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='博客分类表';
+
+CREATE TABLE IF NOT EXISTS `sys_blogs` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '博客主键',
+  `title` VARCHAR(200) NOT NULL COMMENT '博客标题',
+  `summary` VARCHAR(500) DEFAULT NULL COMMENT '博客摘要',
+  `cover_image` VARCHAR(255) DEFAULT NULL COMMENT '封面图',
+  `content` LONGTEXT NOT NULL COMMENT '博客正文',
+  `category_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '博客分类ID',
+  `tag_list` VARCHAR(255) DEFAULT NULL COMMENT '标签列表，逗号分隔',
+  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态 1已发布 0草稿',
+  `view_count` INT NOT NULL DEFAULT 0 COMMENT '浏览量',
+  `like_count` INT NOT NULL DEFAULT 0 COMMENT '点赞量',
+  `author_id` BIGINT UNSIGNED NOT NULL COMMENT '作者ID',
+  `published_at` DATETIME DEFAULT NULL COMMENT '发布时间',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_sys_blogs_status_published_at` (`status`, `published_at`),
+  KEY `idx_sys_blogs_author_id` (`author_id`),
+  KEY `idx_sys_blogs_category_id` (`category_id`),
+  CONSTRAINT `fk_sys_blogs_author_id`
+    FOREIGN KEY (`author_id`) REFERENCES `sys_users` (`id`)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT `fk_sys_blogs_category_id`
+    FOREIGN KEY (`category_id`) REFERENCES `sys_blog_categories` (`id`)
+    ON UPDATE CASCADE
+    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='博客内容表';
 
 CREATE TABLE IF NOT EXISTS `alumni_users` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '校友用户主键',
@@ -322,6 +388,16 @@ INSERT INTO `sys_users` (
   `email`,
   `phone`,
   `avatar`,
+  `title`,
+  `bio`,
+  `gender`,
+  `location`,
+  `website`,
+  `birthday`,
+  `start_work_date`,
+  `company`,
+  `department`,
+  `position`,
   `status`,
   `last_login_at`
 )
@@ -333,6 +409,16 @@ VALUES (
   'admin@rongchuan.local',
   '13800000000',
   NULL,
+  '系统运营负责人',
+  '负责融川后台系统的账号管理、权限配置和运营支持。',
+  '保密',
+  '中国·南京',
+  'https://rongchuan.local',
+  '1995-06-21',
+  '2018-10',
+  '融川科技',
+  '平台研发部',
+  '系统管理员',
   1,
   NULL
 )
@@ -342,6 +428,16 @@ ON DUPLICATE KEY UPDATE
   `email` = VALUES(`email`),
   `phone` = VALUES(`phone`),
   `avatar` = VALUES(`avatar`),
+  `title` = VALUES(`title`),
+  `bio` = VALUES(`bio`),
+  `gender` = VALUES(`gender`),
+  `location` = VALUES(`location`),
+  `website` = VALUES(`website`),
+  `birthday` = VALUES(`birthday`),
+  `start_work_date` = VALUES(`start_work_date`),
+  `company` = VALUES(`company`),
+  `department` = VALUES(`department`),
+  `position` = VALUES(`position`),
   `status` = VALUES(`status`);
 
 INSERT INTO `sys_user_roles` (`user_id`, `role_id`)
