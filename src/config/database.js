@@ -27,6 +27,17 @@ const profileColumns = [
   { name: 'company', sql: "ALTER TABLE `sys_users` ADD COLUMN `company` VARCHAR(150) DEFAULT NULL COMMENT '公司名称' AFTER `start_work_date`" },
   { name: 'department', sql: "ALTER TABLE `sys_users` ADD COLUMN `department` VARCHAR(100) DEFAULT NULL COMMENT '所属部门' AFTER `company`" },
   { name: 'position', sql: "ALTER TABLE `sys_users` ADD COLUMN `position` VARCHAR(100) DEFAULT NULL COMMENT '岗位' AFTER `department`" },
+  { name: 'hobby', sql: "ALTER TABLE `sys_users` ADD COLUMN `hobby` VARCHAR(500) DEFAULT NULL COMMENT '鍏磋叮鏍囩鍘熷鏂囨湰' AFTER `position`" },
+  { name: 'interest_likes', sql: "ALTER TABLE `sys_users` ADD COLUMN `interest_likes` JSON DEFAULT NULL COMMENT '鍠滄鐨勫叴瓒ｆ爣绛?' AFTER `hobby`" },
+  { name: 'interest_dislikes', sql: "ALTER TABLE `sys_users` ADD COLUMN `interest_dislikes` JSON DEFAULT NULL COMMENT '涓嶅枩娆㈢殑鍏磋叮鏍囩' AFTER `interest_likes`" },
+  { name: 'interest_selection', sql: "ALTER TABLE `sys_users` ADD COLUMN `interest_selection` JSON DEFAULT NULL COMMENT '鍏磋叮鏍囩閫夋嫨缁撴灉' AFTER `interest_dislikes`" },
+];
+
+const profileCommentSqls = [
+  "ALTER TABLE `sys_users` MODIFY COLUMN `hobby` VARCHAR(500) DEFAULT NULL COMMENT 'interest tags raw text'",
+  "ALTER TABLE `sys_users` MODIFY COLUMN `interest_likes` JSON DEFAULT NULL COMMENT 'liked interest tags'",
+  "ALTER TABLE `sys_users` MODIFY COLUMN `interest_dislikes` JSON DEFAULT NULL COMMENT 'disliked interest tags'",
+  "ALTER TABLE `sys_users` MODIFY COLUMN `interest_selection` JSON DEFAULT NULL COMMENT 'interest selection payload'",
 ];
 
 const blogCategoryTableSql = `
@@ -124,6 +135,10 @@ async function ensureProfileColumns() {
     if (!existingColumns.has(column.name)) {
       await pool.execute(column.sql);
     }
+  }
+
+  for (const sql of profileCommentSqls) {
+    await pool.execute(sql);
   }
 }
 

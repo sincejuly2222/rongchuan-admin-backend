@@ -46,6 +46,13 @@ function buildCurrentUserProfile(user) {
     company: user.company,
     department: user.department,
     position: user.position,
+    hobby: user.hobby || '',
+    interestLikes: Array.isArray(user.interest_likes) ? user.interest_likes : [],
+    interestDislikes: Array.isArray(user.interest_dislikes) ? user.interest_dislikes : [],
+    interestSelection: user.interest_selection || {
+      liked: Array.isArray(user.interest_likes) ? user.interest_likes : [],
+      disliked: Array.isArray(user.interest_dislikes) ? user.interest_dislikes : [],
+    },
     status: user.status,
     lastLoginAt: user.last_login_at,
     createdAt: user.created_at,
@@ -177,6 +184,16 @@ function normalizeOptionalString(value) {
 
   const normalized = String(value).trim();
   return normalized === '' ? null : normalized;
+}
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
 }
 
 function getRequestIp(req) {
@@ -455,6 +472,13 @@ async function updateCurrentUserProfile(req, res, next) {
     const company = normalizeOptionalString(req.body.company);
     const department = normalizeOptionalString(req.body.department);
     const position = normalizeOptionalString(req.body.position);
+    const hobby = normalizeOptionalString(req.body.hobby);
+    const interestLikes = normalizeStringArray(req.body.interestLikes);
+    const interestDislikes = normalizeStringArray(req.body.interestDislikes);
+    const interestSelection = {
+      liked: interestLikes,
+      disliked: interestDislikes,
+    };
 
     if (!name || !email) {
       return sendError(res, {
@@ -500,6 +524,10 @@ async function updateCurrentUserProfile(req, res, next) {
       startWorkDate,
       company,
       department,
+      hobby,
+      interestLikes,
+      interestDislikes,
+      interestSelection,
       position,
     });
 

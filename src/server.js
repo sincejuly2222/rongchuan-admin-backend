@@ -1,23 +1,25 @@
-// Application bootstrap: verifies database connectivity, then starts the HTTP server.
+// Application bootstrap: starts the HTTP server first, then initializes database connectivity in the background.
 const app = require('./app');
 const env = require('./config/env');
 const { ensureBlogTable, ensureProfileColumns, testConnection } = require('./config/database');
 
-async function startServer() {
+async function initializeDatabase() {
   try {
     await testConnection();
     console.log('数据库连接成功。');
     await ensureProfileColumns();
     await ensureBlogTable();
-    console.log('用户资料字段检查完成。');
-
-    app.listen(env.port, () => {
-      console.log(`服务已启动，监听端口 ${env.port}`);
-    });
+    console.log('数据库初始化检查完成。');
   } catch (error) {
-    console.error('服务启动失败：', error.message);
-    process.exit(1);
+    console.error('数据库初始化失败：', error.message);
   }
+}
+
+function startServer() {
+  app.listen(env.port, () => {
+    console.log(`服务已启动，监听端口 ${env.port}`);
+    void initializeDatabase();
+  });
 }
 
 startServer();

@@ -6,6 +6,22 @@ function mapManagedUserRow(row) {
     return null;
   }
 
+  const parseJsonField = (value, fallback) => {
+    if (value === null || value === undefined || value === '') {
+      return fallback;
+    }
+
+    if (typeof value === 'object') {
+      return value;
+    }
+
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return fallback;
+    }
+  };
+
   return {
     id: row.id,
     username: row.username,
@@ -23,6 +39,10 @@ function mapManagedUserRow(row) {
     company: row.company,
     department: row.department,
     position: row.position,
+    hobby: row.hobby,
+    interest_likes: parseJsonField(row.interest_likes, []),
+    interest_dislikes: parseJsonField(row.interest_dislikes, []),
+    interest_selection: parseJsonField(row.interest_selection, null),
     status: row.status,
     last_login_at: row.last_login_at,
     created_at: row.created_at,
@@ -56,6 +76,10 @@ async function findByUsername(username) {
       start_work_date,
       company,
       department,
+      hobby,
+      interest_likes,
+      interest_dislikes,
+      interest_selection,
       position,
       status,
       last_login_at,
@@ -89,6 +113,10 @@ async function findByEmail(email) {
       start_work_date,
       company,
       department,
+      hobby,
+      interest_likes,
+      interest_dislikes,
+      interest_selection,
       position,
       status,
       last_login_at,
@@ -153,6 +181,10 @@ async function findById(id) {
       start_work_date,
       company,
       department,
+      hobby,
+      interest_likes,
+      interest_dislikes,
+      interest_selection,
       position,
       status,
       last_login_at,
@@ -208,6 +240,10 @@ async function findManagedUserById(id) {
       u.start_work_date,
       u.company,
       u.department,
+      u.hobby,
+      u.interest_likes,
+      u.interest_dislikes,
+      u.interest_selection,
       u.position,
       u.status,
       u.last_login_at,
@@ -235,6 +271,10 @@ async function findManagedUserById(id) {
       u.start_work_date,
       u.company,
       u.department,
+      u.hobby,
+      u.interest_likes,
+      u.interest_dislikes,
+      u.interest_selection,
       u.position,
       u.status,
       u.last_login_at,
@@ -465,13 +505,37 @@ async function updateCurrentUserProfile(id, {
   startWorkDate = null,
   company = null,
   department = null,
+  hobby = null,
+  interestLikes = [],
+  interestDislikes = [],
+  interestSelection = null,
   position = null,
 }) {
   await pool.execute(
     `UPDATE sys_users
-     SET name = ?, email = ?, phone = ?, avatar = ?, title = ?, bio = ?, gender = ?, location = ?, website = ?, birthday = ?, start_work_date = ?, company = ?, department = ?, position = ?
+     SET name = ?, email = ?, phone = ?, avatar = ?, title = ?, bio = ?, gender = ?, location = ?, website = ?, birthday = ?, start_work_date = ?, company = ?, department = ?, hobby = ?, interest_likes = ?, interest_dislikes = ?, interest_selection = ?, position = ?
      WHERE id = ?`,
-    [name, email, phone, avatar, title, bio, gender, location, website, birthday, startWorkDate, company, department, position, id]
+    [
+      name,
+      email,
+      phone,
+      avatar,
+      title,
+      bio,
+      gender,
+      location,
+      website,
+      birthday,
+      startWorkDate,
+      company,
+      department,
+      hobby,
+      JSON.stringify(Array.isArray(interestLikes) ? interestLikes : []),
+      JSON.stringify(Array.isArray(interestDislikes) ? interestDislikes : []),
+      JSON.stringify(interestSelection),
+      position,
+      id,
+    ]
   );
 
   return findManagedUserById(id);
