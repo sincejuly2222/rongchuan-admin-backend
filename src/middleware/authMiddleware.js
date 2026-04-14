@@ -33,6 +33,30 @@ function authenticateToken(req, res, next) {
   }
 }
 
+function authenticateOptionalToken(req, res, next) {
+  const authorization = req.headers.authorization || '';
+  const bearerToken = authorization.startsWith('Bearer ')
+    ? authorization.slice(7)
+    : null;
+
+  if (!bearerToken) {
+    return next();
+  }
+
+  try {
+    const payload = verifyAccessToken(bearerToken);
+
+    if (payload.type === 'access') {
+      req.user = payload;
+    }
+  } catch (error) {
+    req.user = undefined;
+  }
+
+  return next();
+}
+
 module.exports = {
+  authenticateOptionalToken,
   authenticateToken,
 };

@@ -532,3 +532,57 @@ npm run db:test
 - 后台管理端接口文档：[`docs/auth-api.md`](./docs/auth-api.md)
 - 小程序端接口规划文档：[`docs/miniapp-api.md`](./docs/miniapp-api.md)
 - 数据库说明：[`database/README.md`](./database/README.md)
+
+## API Coverage Supplement
+
+The following route groups are also mounted in the current backend and should be treated as part of the documented admin API surface:
+
+### Activities
+
+- `GET /api/activities`
+- `POST /api/activities`
+- `PUT /api/activities/:id`
+- `PATCH /api/activities/:id/status`
+
+### Organizations
+
+- `GET /api/organizations`
+- `POST /api/organizations`
+- `PUT /api/organizations/:id`
+- `PATCH /api/organizations/:id/status`
+
+### Student Records
+
+- `GET /api/student-records`
+- `PATCH /api/student-records/:id/status`
+
+### Import Jobs
+
+- `GET /api/import-jobs`
+- `POST /api/import-jobs/upload`
+
+### Blog Categories and Blogs
+
+- `GET /api/blogs/categories`
+- `GET /api/blogs/categories/manage`
+- `POST /api/blogs/categories`
+- `PUT /api/blogs/categories/:id`
+- `DELETE /api/blogs/categories/:id`
+- `PATCH /api/blogs/categories/sort`
+- `GET /api/blogs`
+- `GET /api/blogs/:id`
+- `GET /api/blogs/:id/edit`
+- `POST /api/blogs`
+- `PUT /api/blogs/:id`
+- `PATCH /api/blogs/:id/status`
+- `DELETE /api/blogs/:id`
+
+### Blog Comments
+
+- `GET /api/blog-comments`
+- `PATCH /api/blog-comments/:id`
+- `DELETE /api/blog-comments/:id`
+
+### Public Proxy APIs
+
+- `GET /api/juejin/hot-frontend`
