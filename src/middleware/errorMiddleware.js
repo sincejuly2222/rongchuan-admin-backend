@@ -1,8 +1,12 @@
 // Global error middleware: converts thrown errors into the project's standard error response format.
 const { sendError } = require('../utils/response');
+const { logError } = require('../utils/errorLogger');
 
 function errorHandler(error, req, res, next) {
-  console.error(error);
+  logError('请求处理失败', error, {
+    method: req.method,
+    path: req.originalUrl,
+  });
 
   if (res.headersSent) {
     return next(error);

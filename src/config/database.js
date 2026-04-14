@@ -17,11 +17,23 @@ const pool = mysql.createPool({
 });
 
 async function testConnection() {
-  const connection = await pool.getConnection();
+  let connection;
+
   try {
+    connection = await pool.getConnection();
     await connection.ping();
+  } catch (error) {
+    const wrappedError = new Error('数据库连接检测失败', { cause: error });
+    wrappedError.context = {
+      host: env.db.host,
+      port: env.db.port,
+      user: env.db.user,
+      database: env.db.database,
+      connectTimeout: 10000,
+    };
+    throw wrappedError;
   } finally {
-    connection.release();
+    connection?.release();
   }
 }
 
