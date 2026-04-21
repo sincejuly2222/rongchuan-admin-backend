@@ -14,9 +14,7 @@
 
 - `sys_users`
 - `sys_roles`
-- `sys_permissions`
 - `sys_user_roles`
-- `sys_role_permissions`
 - `auth_refresh_sessions`
 - `sys_menus`
 - `alumni_users`
@@ -29,7 +27,6 @@
 - 登录、注册、刷新 token、退出登录
 - 用户列表与用户状态修改
 - 角色列表
-- 权限列表
 - 菜单管理
 - 校友列表、校友详情、校友状态维护
 - 学籍信息维护
@@ -99,7 +96,7 @@
 - 默认账号：`admin`
 - 默认密码：`Admin@123456`
 - 默认角色：`SUPER_ADMIN`、`OPERATOR`
-- 默认权限：用户、角色、权限列表以及用户状态修改
+- 默认菜单：后台管理基础导航菜单
 
 ## 初始化方式
 

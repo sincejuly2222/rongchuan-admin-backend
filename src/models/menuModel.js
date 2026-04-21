@@ -77,6 +77,33 @@ async function listAllMenus() {
   return rows;
 }
 
+async function listMenusByUserId(userId) {
+  const [rows] = await pool.execute(
+    `SELECT DISTINCT
+      m.id,
+      m.parent_id,
+      m.menu_name,
+      m.menu_code,
+      m.path,
+      m.component,
+      m.icon,
+      m.sort_order,
+      m.status,
+      m.created_at,
+      m.updated_at,
+      parent.menu_name AS parent_name
+     FROM sys_menus m
+     INNER JOIN sys_role_menus rm ON rm.menu_id = m.id
+     INNER JOIN sys_user_roles ur ON ur.role_id = rm.role_id
+     LEFT JOIN sys_menus parent ON parent.id = m.parent_id
+     WHERE ur.user_id = ?
+     ORDER BY m.sort_order ASC, m.id ASC`,
+    [userId]
+  );
+
+  return rows;
+}
+
 async function findById(id) {
   const [rows] = await pool.execute(
     `SELECT
@@ -199,6 +226,7 @@ module.exports = {
   findByMenuCode,
   findByMenuCodeExcludingId,
   listAllMenus,
+  listMenusByUserId,
   listMenus,
   updateMenu,
   updateStatus,

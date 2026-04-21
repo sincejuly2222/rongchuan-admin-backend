@@ -8,7 +8,7 @@ const router = express.Router();
 router.post('/', authenticateToken, roleController.createRole);
 router.get('/', authenticateToken, roleController.listRoles);
 router.put('/:id', authenticateToken, roleController.updateRole);
-router.get('/:id/permissions', authenticateToken, roleController.getRolePermissions);
-router.put('/:id/permissions', authenticateToken, roleController.updateRolePermissions);
+router.get('/:id/menus', authenticateToken, roleController.getRoleMenus);
+router.put('/:id/menus', authenticateToken, roleController.updateRoleMenus);
 
 module.exports = router;

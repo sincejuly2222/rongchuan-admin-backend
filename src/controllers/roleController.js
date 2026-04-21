@@ -24,19 +24,19 @@ function parseStatus(value, defaultValue) {
   return normalized;
 }
 
-function parsePermissionIds(value) {
+function parsePositiveIds(value) {
   if (!Array.isArray(value)) {
     return null;
   }
 
-  const permissionIds = value.map((item) => Number(item));
-  const allValid = permissionIds.every((permissionId) => Number.isInteger(permissionId) && permissionId > 0);
+  const ids = value.map((item) => Number(item));
+  const allValid = ids.every((id) => Number.isInteger(id) && id > 0);
 
   if (!allValid) {
     return null;
   }
 
-  return [...new Set(permissionIds)];
+  return [...new Set(ids)];
 }
 
 async function listRoles(req, res, next) {
@@ -133,7 +133,7 @@ async function createRole(req, res, next) {
   }
 }
 
-async function getRolePermissions(req, res, next) {
+async function getRoleMenus(req, res, next) {
   try {
     const roleId = Number(req.params.id);
 
@@ -152,13 +152,13 @@ async function getRolePermissions(req, res, next) {
       });
     }
 
-    const permissionIds = await roleModel.getRolePermissionIds(roleId);
+    const menuIds = await roleModel.getRoleMenuIds(roleId);
 
     return sendSuccess(res, {
-      message: '获取角色权限成功',
+      message: '获取角色菜单成功',
       data: {
         roleId,
-        permissionIds,
+        menuIds,
       },
     });
   } catch (error) {
@@ -166,10 +166,10 @@ async function getRolePermissions(req, res, next) {
   }
 }
 
-async function updateRolePermissions(req, res, next) {
+async function updateRoleMenus(req, res, next) {
   try {
     const roleId = Number(req.params.id);
-    const permissionIds = parsePermissionIds(req.body.permissionIds);
+    const menuIds = parsePositiveIds(req.body.menuIds);
 
     if (!Number.isFinite(roleId) || roleId < 1) {
       return sendError(res, {
@@ -178,10 +178,10 @@ async function updateRolePermissions(req, res, next) {
       });
     }
 
-    if (permissionIds === null) {
+    if (menuIds === null) {
       return sendError(res, {
         statusCode: 400,
-        message: '权限参数不正确',
+        message: '菜单参数不正确',
       });
     }
 
@@ -193,21 +193,28 @@ async function updateRolePermissions(req, res, next) {
       });
     }
 
-    const existingPermissionIds = await roleModel.findPermissionIds(permissionIds);
-    if (existingPermissionIds.length !== permissionIds.length) {
+    if (role.role_code === 'SUPER_ADMIN') {
       return sendError(res, {
         statusCode: 400,
-        message: '权限不存在',
+        message: '超级管理员角色不可修改菜单权限',
       });
     }
 
-    const updatedPermissionIds = await roleModel.updateRolePermissions(roleId, permissionIds);
+    const existingMenuIds = await roleModel.findMenuIds(menuIds);
+    if (existingMenuIds.length !== menuIds.length) {
+      return sendError(res, {
+        statusCode: 400,
+        message: '菜单不存在',
+      });
+    }
+
+    const updatedMenuIds = await roleModel.updateRoleMenus(roleId, menuIds);
 
     return sendSuccess(res, {
-      message: '更新角色权限成功',
+      message: '更新角色菜单成功',
       data: {
         roleId,
-        permissionIds: updatedPermissionIds,
+        menuIds: updatedMenuIds,
       },
     });
   } catch (error) {
@@ -278,8 +285,8 @@ async function updateRole(req, res, next) {
 
 module.exports = {
   createRole,
-  getRolePermissions,
+  getRoleMenus,
   listRoles,
   updateRole,
-  updateRolePermissions,
+  updateRoleMenus,
 };

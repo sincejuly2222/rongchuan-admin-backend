@@ -363,8 +363,56 @@ async function updateUser(req, res, next) {
   }
 }
 
+async function deleteUser(req, res, next) {
+  try {
+    const userId = Number(req.params.id);
+
+    if (!Number.isFinite(userId) || userId < 1) {
+      return sendError(res, {
+        statusCode: 400,
+        message: '用户ID不正确',
+      });
+    }
+
+    if (req.user?.userId === userId) {
+      return sendError(res, {
+        statusCode: 400,
+        message: '不能删除当前登录用户',
+      });
+    }
+
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return sendError(res, {
+        statusCode: 404,
+        message: '用户不存在',
+      });
+    }
+
+    const isSuperAdmin = await userModel.hasRoleCode(userId, 'SUPER_ADMIN');
+    if (isSuperAdmin) {
+      return sendError(res, {
+        statusCode: 400,
+        message: '不能删除超级管理员用户',
+      });
+    }
+
+    await userModel.deleteManagedUser(userId);
+
+    return sendSuccess(res, {
+      message: '删除用户成功',
+      data: {
+        id: userId,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   createUser,
+  deleteUser,
   listUsers,
   updateUser,
   updateUserStatus,

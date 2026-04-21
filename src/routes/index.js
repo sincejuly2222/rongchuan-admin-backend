@@ -11,7 +11,6 @@ const importJobRoutes = require('./importJobRoutes');
 const juejinRoutes = require('./juejinRoutes');
 const menuRoutes = require('./menuRoutes');
 const organizationRoutes = require('./organizationRoutes');
-const permissionRoutes = require('./permissionRoutes');
 const roleRoutes = require('./roleRoutes');
 const studentRecordRoutes = require('./studentRecordRoutes');
 const userRoutes = require('./userRoutes');
@@ -31,7 +30,6 @@ router.use('/organizations', organizationRoutes);
 router.use('/student-records', studentRecordRoutes);
 router.use('/users', userRoutes);
 router.use('/roles', roleRoutes);
-router.use('/permissions', permissionRoutes);
 router.use('/menus', menuRoutes);
 
 module.exports = router;

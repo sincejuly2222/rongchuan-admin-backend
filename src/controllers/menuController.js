@@ -121,7 +121,10 @@ async function listMenus(req, res, next) {
 
 async function listMenuTree(req, res, next) {
   try {
-    const menus = await menuModel.listAllMenus();
+    const menus =
+      req.query.scope === 'all'
+        ? await menuModel.listAllMenus()
+        : await menuModel.listMenusByUserId(req.user.userId);
     const tree = buildMenuTree(menus);
 
     return sendSuccess(res, {

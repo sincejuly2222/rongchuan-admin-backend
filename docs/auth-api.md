@@ -2,7 +2,7 @@
 
 Base path: `/api`
 
-本文档基于当前后端代码整理，覆盖当前已经实现并注册到服务中的后台管理端接口，包括健康检查、认证、用户、角色、权限、菜单、校友管理、学籍管理、名片管理、名片交换等。
+本文档基于当前后端代码整理，覆盖当前已经实现并注册到服务中的后台管理端接口，包括健康检查、认证、用户、角色、菜单、校友管理、学籍管理、名片管理、名片交换等。
 
 ## 通用说明
 
@@ -144,12 +144,14 @@ Authorization: Bearer <accessToken>
 
 `POST /api/auth/login`
 
+登录前需先调用 `GET /api/auth/login-public-key` 获取 RSA 公钥，前端使用 `RSA-OAEP` + `SHA-256` 加密密码后，将 Base64 密文放入 `encryptedPassword`。
+
 请求体：
 
 ```json
 {
   "username": "admin",
-  "password": "Admin@123456"
+  "encryptedPassword": "<RSA-OAEP-256 密文 Base64>"
 }
 ```
 
@@ -193,7 +195,24 @@ Set-Cookie: refreshToken=...; HttpOnly; Path=/api/auth; SameSite=Lax
 - `401`: 用户名或密码错误
 - `403`: 账号已被禁用
 
-## 3. 注册
+## 3. 获取登录加密公钥
+
+`GET /api/auth/login-public-key`
+
+成功响应：
+
+```json
+{
+  "code": 200,
+  "message": "获取登录公钥成功",
+  "data": {
+    "publicKey": "-----BEGIN PUBLIC KEY-----\\n...\\n-----END PUBLIC KEY-----\\n",
+    "algorithm": "RSA-OAEP-256"
+  }
+}
+```
+
+## 4. 注册
 
 `POST /api/auth/register`
 
@@ -245,7 +264,7 @@ Set-Cookie: refreshToken=...; HttpOnly; Path=/api/auth; SameSite=Lax
 - `409`: 用户名已存在
 - `409`: 邮箱已存在
 
-## 4. 获取初始化数据
+## 5. 获取初始化数据
 
 `GET /api/auth/bootstrap`
 
@@ -290,7 +309,7 @@ Authorization: Bearer <accessToken>
 - `401`: 访问令牌无效或已过期
 - `404`: 用户不存在
 
-## 5. 获取当前登录用户
+## 6. 获取当前登录用户
 
 `GET /api/auth/me`
 
@@ -331,7 +350,7 @@ Authorization: Bearer <accessToken>
 - `401`: 访问令牌无效或已过期
 - `404`: 用户不存在
 
-## 6. 更新当前登录人个人信息
+## 7. 更新当前登录人个人信息
 
 `PUT /api/auth/profile`
 
@@ -404,7 +423,7 @@ Content-Type: application/json
 - `404`: 用户不存在
 - `409`: 邮箱已存在
 
-## 7. 刷新 Access Token
+## 8. 刷新 Access Token
 
 `POST /api/auth/refresh`
 
@@ -439,7 +458,7 @@ Content-Type: application/json
 - `401`: 刷新令牌无效或已过期
 - `401`: 用户不存在或已被删除
 
-## 7. 退出登录
+## 9. 退出登录
 
 `POST /api/auth/logout`
 
@@ -459,7 +478,7 @@ Content-Type: application/json
 }
 ```
 
-## 8. 获取用户列表
+## 10. 获取用户列表
 
 `GET /api/users`
 
@@ -515,7 +534,7 @@ GET /api/users?current=1&pageSize=10&username=admin&status=1
 - `401`: 缺少访问令牌
 - `401`: 访问令牌无效或已过期
 
-## 9. 新增用户
+## 11. 新增用户
 
 `POST /api/users`
 
@@ -582,7 +601,7 @@ GET /api/users?current=1&pageSize=10&username=admin&status=1
 - `409`: 用户名已存在
 - `409`: 邮箱已存在
 
-## 10. 编辑用户
+## 12. 编辑用户
 
 `PUT /api/users/:id`
 
@@ -652,7 +671,7 @@ Path 参数：
 - `409`: 用户名已存在
 - `409`: 邮箱已存在
 
-## 11. 更新用户状态
+## 13. 更新用户状态
 
 `PATCH /api/users/:id/status`
 
@@ -693,7 +712,7 @@ Path 参数：
 - `401`: 访问令牌无效或已过期
 - `404`: 用户不存在
 
-## 12. 获取角色列表
+## 14. 获取角色列表
 
 `GET /api/roles`
 
@@ -723,7 +742,7 @@ Query 参数：
         "created_at": "2026-04-03T06:21:10.000Z",
         "updated_at": "2026-04-03T06:21:10.000Z",
         "member_count": 0,
-        "permission_count": 3
+        "menu_count": 4
       }
     ],
     "total": 2,
@@ -740,7 +759,7 @@ Query 参数：
 - `401`: 缺少访问令牌
 - `401`: 访问令牌无效或已过期
 
-## 13. 新增角色
+## 15. 新增角色
 
 `POST /api/roles`
 
@@ -777,7 +796,7 @@ Query 参数：
     "created_at": "2026-04-03T11:10:00.000Z",
     "updated_at": "2026-04-03T11:10:00.000Z",
     "member_count": 0,
-    "permission_count": 0
+    "menu_count": 0
   }
 }
 ```
@@ -790,7 +809,7 @@ Query 参数：
 - `401`: 访问令牌无效或已过期
 - `409`: 角色编码已存在
 
-## 14. 编辑角色
+## 16. 编辑角色
 
 `PUT /api/roles/:id`
 
@@ -829,7 +848,7 @@ Path 参数：
     "created_at": "2026-04-03T11:10:00.000Z",
     "updated_at": "2026-04-03T11:20:00.000Z",
     "member_count": 0,
-    "permission_count": 0
+    "menu_count": 0
   }
 }
 ```
@@ -844,9 +863,9 @@ Path 参数：
 - `404`: 角色不存在
 - `409`: 角色编码已存在
 
-## 15. 获取角色已绑定权限
+## 17. 获取角色已绑定菜单
 
-`GET /api/roles/:id/permissions`
+`GET /api/roles/:id/menus`
 
 Path 参数：
 
@@ -857,10 +876,10 @@ Path 参数：
 ```json
 {
   "code": 200,
-  "message": "获取角色权限成功",
+  "message": "获取角色菜单成功",
   "data": {
     "roleId": 1,
-    "permissionIds": [1, 2, 3, 4]
+    "menuIds": [1, 2, 3, 4]
   }
 }
 ```
@@ -872,9 +891,9 @@ Path 参数：
 - `401`: 访问令牌无效或已过期
 - `404`: 角色不存在
 
-## 16. 更新角色权限
+## 18. 更新角色菜单
 
-`PUT /api/roles/:id/permissions`
+`PUT /api/roles/:id/menus`
 
 Path 参数：
 
@@ -884,24 +903,25 @@ Path 参数：
 
 ```json
 {
-  "permissionIds": [1, 2, 3]
+  "menuIds": [1, 2, 3]
 }
 ```
 
 说明：
 
-- `permissionIds` 必须为数组
-- 传空数组 `[]` 表示清空该角色已绑定权限
+- `menuIds` 必须为数组
+- 传空数组 `[]` 表示清空该角色已绑定菜单
+- `SUPER_ADMIN` 角色不可修改菜单权限
 
 成功响应：
 
 ```json
 {
   "code": 200,
-  "message": "更新角色权限成功",
+  "message": "更新角色菜单成功",
   "data": {
     "roleId": 1,
-    "permissionIds": [1, 2, 3]
+    "menuIds": [1, 2, 3]
   }
 }
 ```
@@ -909,146 +929,14 @@ Path 参数：
 错误情况：
 
 - `400`: 角色ID不正确
-- `400`: 权限参数不正确
-- `400`: 权限不存在
+- `400`: 菜单参数不正确
+- `400`: 菜单不存在
+- `400`: 超级管理员角色不可修改菜单权限
 - `401`: 缺少访问令牌
 - `401`: 访问令牌无效或已过期
 - `404`: 角色不存在
 
-## 17. 获取权限列表
-
-`GET /api/permissions`
-
-Query 参数：
-
-- `current`: 页码，默认 `1`
-- `page`: 页码别名
-- `pageSize`: 每页条数，默认 `10`
-- `permissionCode`: 权限编码模糊搜索
-- `permissionName`: 权限名称模糊搜索
-
-成功响应：
-
-```json
-{
-  "code": 200,
-  "message": "获取权限列表成功",
-  "data": {
-    "list": [
-      {
-        "id": 4,
-        "permission_code": "permission:list",
-        "permission_name": "查看权限",
-        "description": "允许查看权限列表",
-        "created_at": "2026-04-03T06:21:10.000Z",
-        "updated_at": "2026-04-03T06:21:10.000Z",
-        "role_count": 2
-      }
-    ],
-    "total": 4,
-    "current": 1,
-    "pageSize": 10
-  }
-}
-```
-
-错误情况：
-
-- `400`: 分页参数不正确
-- `401`: 缺少访问令牌
-- `401`: 访问令牌无效或已过期
-
-## 18. 新增权限
-
-`POST /api/permissions`
-
-请求体：
-
-```json
-{
-  "permissionCode": "menu:create",
-  "permissionName": "新增菜单",
-  "description": "允许创建菜单"
-}
-```
-
-字段说明：
-
-- `permissionCode`: 必填，必须唯一
-- `permissionName`: 必填
-- `description`: 可选，空字符串会转为 `null`
-
-成功响应：
-
-```json
-{
-  "code": 201,
-  "message": "新增权限成功",
-  "data": {
-    "id": 5,
-    "permission_code": "menu:create",
-    "permission_name": "新增菜单",
-    "description": "允许创建菜单",
-    "created_at": "2026-04-03T12:00:00.000Z",
-    "updated_at": "2026-04-03T12:00:00.000Z",
-    "role_count": 0
-  }
-}
-```
-
-错误情况：
-
-- `400`: 权限编码和权限名称不能为空
-- `401`: 缺少访问令牌
-- `401`: 访问令牌无效或已过期
-- `409`: 权限编码已存在
-
-## 19. 编辑权限
-
-`PUT /api/permissions/:id`
-
-Path 参数：
-
-- `id`: 权限 ID
-
-请求体：
-
-```json
-{
-  "permissionCode": "menu:create",
-  "permissionName": "新增菜单权限",
-  "description": "允许创建后台菜单"
-}
-```
-
-成功响应：
-
-```json
-{
-  "code": 200,
-  "message": "编辑权限成功",
-  "data": {
-    "id": 5,
-    "permission_code": "menu:create",
-    "permission_name": "新增菜单权限",
-    "description": "允许创建后台菜单",
-    "created_at": "2026-04-03T12:00:00.000Z",
-    "updated_at": "2026-04-03T12:10:00.000Z",
-    "role_count": 0
-  }
-}
-```
-
-错误情况：
-
-- `400`: 权限ID不正确
-- `400`: 权限编码和权限名称不能为空
-- `401`: 缺少访问令牌
-- `401`: 访问令牌无效或已过期
-- `404`: 权限不存在
-- `409`: 权限编码已存在
-
-## 20. 获取菜单列表
+## 19. 获取菜单列表
 
 `GET /api/menus`
 
@@ -1097,7 +985,7 @@ Query 参数：
 - `401`: 缺少访问令牌
 - `401`: 访问令牌无效或已过期
 
-## 21. 新增菜单
+## 20. 新增菜单
 
 `POST /api/menus`
 
@@ -1161,7 +1049,7 @@ Query 参数：
 - `401`: 访问令牌无效或已过期
 - `409`: 菜单编码已存在
 
-## 22. 编辑菜单
+## 21. 编辑菜单
 
 `PUT /api/menus/:id`
 
@@ -1227,7 +1115,7 @@ Path 参数：
 - `404`: 菜单不存在
 - `409`: 菜单编码已存在
 
-## 23. 更新菜单状态
+## 22. 更新菜单状态
 
 `PATCH /api/menus/:id/status`
 
@@ -1268,7 +1156,7 @@ Path 参数：
 - `401`: 访问令牌无效或已过期
 - `404`: 菜单不存在
 
-## 24. 获取菜单树
+## 23. 获取菜单树
 
 `GET /api/menus/tree`
 
@@ -1352,7 +1240,7 @@ Path 参数：
 - `401`: 缺少访问令牌
 - `401`: 访问令牌无效或已过期
 
-## 25. 删除菜单
+## 24. 删除菜单
 
 `DELETE /api/menus/:id`
 
@@ -1566,7 +1454,7 @@ Authorization: Bearer <accessToken>
 - `403`: 无权操作当前博客
 - `404`: 博客不存在
 
-## 26. 获取校友列表
+## 25. 获取校友列表
 
 `GET /api/alumni-users`
 
@@ -1627,7 +1515,7 @@ Query 参数：
 - `401`: 缺少访问令牌
 - `401`: 访问令牌无效或已过期
 
-## 27. 新增校友
+## 26. 新增校友
 
 `POST /api/alumni-users`
 
@@ -1699,7 +1587,7 @@ Query 参数：
 - `409`: OpenID 已存在
 - `409`: 手机号已存在
 
-## 28. 获取校友详情
+## 27. 获取校友详情
 
 `GET /api/alumni-users/:id`
 
@@ -1760,7 +1648,7 @@ Path 参数：
 - `401`: 访问令牌无效或已过期
 - `404`: 校友不存在
 
-## 29. 编辑校友
+## 28. 编辑校友
 
 `PUT /api/alumni-users/:id`
 
@@ -1800,7 +1688,7 @@ Path 参数：
 - `409`: OpenID 已存在
 - `409`: 手机号已存在
 
-## 30. 更新校友状态
+## 29. 更新校友状态
 
 `PATCH /api/alumni-users/:id/status`
 
@@ -1820,7 +1708,7 @@ Path 参数：
 - `401`: 访问令牌无效或已过期
 - `404`: 校友不存在
 
-## 31. 保存学籍信息
+## 30. 保存学籍信息
 
 `PUT /api/alumni-users/:id/student-record`
 
@@ -1854,7 +1742,7 @@ Path 参数：
 - `401`: 访问令牌无效或已过期
 - `404`: 校友不存在
 
-## 32. 保存名片信息
+## 31. 保存名片信息
 
 `PUT /api/alumni-users/:id/card`
 
@@ -1884,7 +1772,7 @@ Path 参数：
 - `401`: 访问令牌无效或已过期
 - `404`: 校友不存在
 
-## 33. 获取名片交换记录列表
+## 32. 获取名片交换记录列表
 
 `GET /api/alumni-exchanges`
 
@@ -1931,7 +1819,7 @@ Query 参数：
 - `401`: 缺少访问令牌
 - `401`: 访问令牌无效或已过期
 
-## 34. 新增名片交换记录
+## 33. 新增名片交换记录
 
 `POST /api/alumni-exchanges`
 
@@ -1962,7 +1850,7 @@ Query 参数：
 - `404`: 交换用户不存在
 - `409`: 该交换记录已存在
 
-## 35. 更新名片交换状态
+## 34. 更新名片交换状态
 
 `PATCH /api/alumni-exchanges/:id/status`
 
@@ -2018,14 +1906,8 @@ This appendix lists every route currently mounted under `/api`.
 - `GET /api/roles`
 - `POST /api/roles`
 - `PUT /api/roles/:id`
-- `GET /api/roles/:id/permissions`
-- `PUT /api/roles/:id/permissions`
-
-### Permissions
-
-- `GET /api/permissions`
-- `POST /api/permissions`
-- `PUT /api/permissions/:id`
+- `GET /api/roles/:id/menus`
+- `PUT /api/roles/:id/menus`
 
 ### Menus
 

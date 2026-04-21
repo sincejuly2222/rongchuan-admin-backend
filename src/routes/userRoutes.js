@@ -9,5 +9,6 @@ router.post('/', authenticateToken, userController.createUser);
 router.get('/', authenticateToken, userController.listUsers);
 router.put('/:id', authenticateToken, userController.updateUser);
 router.patch('/:id/status', authenticateToken, userController.updateUserStatus);
+router.delete('/:id', authenticateToken, userController.deleteUser);
 
 module.exports = router;

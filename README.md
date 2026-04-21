@@ -1,6 +1,6 @@
 # rongchuanAdminBackend
 
-融川后台管理系统后端服务，基于 Node.js、Express 和 MySQL 构建，提供认证、用户、角色、权限、菜单，以及校友业务管理等后台能力。
+融川后台管理系统后端服务，基于 Node.js、Express 和 MySQL 构建，提供认证、用户、角色、菜单，以及校友业务管理等后台能力。
 
 ## README 是干嘛的
 
@@ -28,8 +28,7 @@
 - 当前登录用户信息获取与个人资料更新
 - 用户管理
 - 角色管理
-- 角色权限绑定
-- 权限管理
+- 角色菜单绑定
 - 菜单管理
 - 校友管理
 - 学籍管理
@@ -196,9 +195,7 @@ REFRESH_TOKEN_SECRET=replace_with_your_refresh_secret
 
 - `sys_users`
 - `sys_roles`
-- `sys_permissions`
 - `sys_user_roles`
-- `sys_role_permissions`
 - `auth_refresh_sessions`
 - `sys_menus`
 - `alumni_users`
@@ -211,7 +208,7 @@ REFRESH_TOKEN_SECRET=replace_with_your_refresh_secret
 - 默认管理员账号：`admin`
 - 默认密码：`Admin@123456`
 - 默认角色：`SUPER_ADMIN`、`OPERATOR`
-- 部分基础权限与菜单数据
+- 基础菜单数据
 
 ### 先配数据库连接
 
@@ -347,11 +344,13 @@ curl http://localhost:3000/api/health
 登录示例：
 
 ```bash
+curl http://localhost:3000/api/auth/login-public-key
+
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
-    "password": "Admin@123456"
+    "encryptedPassword": "使用 /api/auth/login-public-key 返回公钥加密后的 Base64 密文"
   }'
 ```
 
@@ -447,14 +446,8 @@ axios.get('http://localhost:3000/api/auth/me', {
 - `GET /api/roles`
 - `POST /api/roles`
 - `PUT /api/roles/:id`
-- `GET /api/roles/:id/permissions`
-- `PUT /api/roles/:id/permissions`
-
-### 权限管理
-
-- `GET /api/permissions`
-- `POST /api/permissions`
-- `PUT /api/permissions/:id`
+- `GET /api/roles/:id/menus`
+- `PUT /api/roles/:id/menus`
 
 ### 菜单管理
 

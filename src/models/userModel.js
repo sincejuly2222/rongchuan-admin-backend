@@ -163,6 +163,19 @@ async function findRoleIds(roleIds) {
   return rows.map((row) => row.id);
 }
 
+async function hasRoleCode(userId, roleCode) {
+  const [rows] = await pool.execute(
+    `SELECT 1
+     FROM sys_user_roles ur
+     INNER JOIN sys_roles r ON r.id = ur.role_id
+     WHERE ur.user_id = ? AND r.role_code = ?
+     LIMIT 1`,
+    [userId, roleCode]
+  );
+
+  return rows.length > 0;
+}
+
 async function findById(id) {
   const [rows] = await pool.execute(
     `SELECT
@@ -393,6 +406,13 @@ async function updateStatus(id, status) {
   );
 }
 
+async function deleteManagedUser(id) {
+  await pool.execute(
+    'DELETE FROM sys_users WHERE id = ?',
+    [id]
+  );
+}
+
 async function createManagedUser({
   username,
   passwordHash,
@@ -555,6 +575,7 @@ module.exports = {
   findByEmail,
   createUser,
   findRoleIds,
+  hasRoleCode,
   findById,
   findByIdWithPassword,
   findManagedUserById,
@@ -563,6 +584,7 @@ module.exports = {
   updateLastLoginAt,
   listUsers,
   updateStatus,
+  deleteManagedUser,
   createManagedUser,
   updateManagedUser,
   updateCurrentUserProfile,

@@ -18,6 +18,36 @@ const USERNAME_MIN_LENGTH = 3;
 const USERNAME_MAX_LENGTH = 20;
 const PASSWORD_MIN_LENGTH = 6;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const loginKeyPair = crypto.generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+  publicKeyEncoding: {
+    type: 'spki',
+    format: 'pem',
+  },
+  privateKeyEncoding: {
+    type: 'pkcs8',
+    format: 'pem',
+  },
+});
+
+function decryptLoginPassword(encryptedPassword) {
+  if (!encryptedPassword) {
+    return '';
+  }
+
+  try {
+    return crypto.privateDecrypt(
+      {
+        key: loginKeyPair.privateKey,
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: 'sha256',
+      },
+      Buffer.from(String(encryptedPassword), 'base64')
+    ).toString('utf8');
+  } catch (error) {
+    return '';
+  }
+}
 
 function buildSafeUser(user) {
   return {
@@ -154,7 +184,7 @@ function buildCurrentUserViews(userProfile, blogs = []) {
 
 async function buildAuthBootstrapData(user) {
   const userProfile = buildCurrentUserProfile(user);
-  const menus = await menuModel.listAllMenus();
+  const menus = await menuModel.listMenusByUserId(userProfile.id);
   const blogs = await blogModel.listHomeBlogs(6);
 
   return {
@@ -294,15 +324,29 @@ async function register(req, res, next) {
   }
 }
 
+async function getLoginPublicKey(req, res, next) {
+  try {
+    return sendSuccess(res, {
+      message: '获取登录公钥成功',
+      data: {
+        publicKey: loginKeyPair.publicKey,
+        algorithm: 'RSA-OAEP-256',
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function login(req, res, next) {
   try {
     const username = req.body.username ? String(req.body.username).trim() : '';
-    const password = req.body.password ? String(req.body.password) : '';
+    const password = decryptLoginPassword(req.body.encryptedPassword);
 
     if (!username || !password) {
       return sendError(res, {
         statusCode: 400,
-        message: '用户名和密码不能为空',
+        message: '用户名和加密密码不能为空',
       });
     }
 
@@ -563,6 +607,7 @@ async function getAuthBootstrap(req, res, next) {
 module.exports = {
   register,
   login,
+  getLoginPublicKey,
   refresh,
   logout,
   getAuthBootstrap,

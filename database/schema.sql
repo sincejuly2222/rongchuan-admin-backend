@@ -125,6 +125,24 @@ CREATE TABLE IF NOT EXISTS `sys_role_permissions` (
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限关联表';
 
+CREATE TABLE IF NOT EXISTS `sys_role_menus` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '角色菜单关联主键',
+  `role_id` BIGINT UNSIGNED NOT NULL COMMENT '角色ID',
+  `menu_id` BIGINT UNSIGNED NOT NULL COMMENT '菜单ID',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_sys_role_menus_role_menu` (`role_id`, `menu_id`),
+  KEY `idx_sys_role_menus_menu_id` (`menu_id`),
+  CONSTRAINT `fk_sys_role_menus_role_id`
+    FOREIGN KEY (`role_id`) REFERENCES `sys_roles` (`id`)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT `fk_sys_role_menus_menu_id`
+    FOREIGN KEY (`menu_id`) REFERENCES `sys_menus` (`id`)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色菜单关联表';
+
 CREATE TABLE IF NOT EXISTS `auth_refresh_sessions` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '刷新会话主键',
   `user_id` BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
@@ -478,10 +496,9 @@ INSERT INTO `sys_menus` (
   `status`
 )
 VALUES
-  (1, 0, '工作台', 'dashboard', '/dashboard', 'views/DashboardPage', 'DashboardOutlined', 10, 1),
+  (1, 0, '首页', 'dashboard', '/dashboard', 'views/DashboardPage', 'DashboardOutlined', 10, 1),
   (2, 0, '用户管理', 'users', '/users', 'views/UsersPage', 'UserOutlined', 20, 1),
   (3, 0, '角色管理', 'roles', '/roles', 'views/RolesPage', 'SafetyOutlined', 30, 1),
-  (4, 0, '权限管理', 'permissions', '/permissions', 'views/PermissionsPage', 'SafetyCertificateOutlined', 40, 1),
   (5, 0, '菜单管理', 'menus', '/menus', 'views/MenusPage', 'MenuOutlined', 50, 1)
 ON DUPLICATE KEY UPDATE
   `parent_id` = VALUES(`parent_id`),
@@ -491,6 +508,19 @@ ON DUPLICATE KEY UPDATE
   `icon` = VALUES(`icon`),
   `sort_order` = VALUES(`sort_order`),
   `status` = VALUES(`status`);
+
+INSERT INTO `sys_role_menus` (`role_id`, `menu_id`)
+SELECT 1, m.id
+FROM `sys_menus` m
+ON DUPLICATE KEY UPDATE
+  `role_id` = VALUES(`role_id`);
+
+INSERT INTO `sys_role_menus` (`role_id`, `menu_id`)
+SELECT 2, m.id
+FROM `sys_menus` m
+WHERE m.menu_code IN ('dashboard')
+ON DUPLICATE KEY UPDATE
+  `role_id` = VALUES(`role_id`);
 
 INSERT INTO `alumni_users` (
   `id`,

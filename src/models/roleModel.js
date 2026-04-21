@@ -40,10 +40,10 @@ async function listRoles({ current, pageSize, roleName, roleCode, status }) {
       r.created_at,
       r.updated_at,
       COUNT(DISTINCT ur.user_id) AS member_count,
-      COUNT(DISTINCT rp.permission_id) AS permission_count
+      COUNT(DISTINCT rm.menu_id) AS menu_count
      FROM sys_roles r
      LEFT JOIN sys_user_roles ur ON ur.role_id = r.id
-     LEFT JOIN sys_role_permissions rp ON rp.role_id = r.id
+     LEFT JOIN sys_role_menus rm ON rm.role_id = r.id
      ${whereClause}
      GROUP BY
       r.id,
@@ -77,10 +77,10 @@ async function findById(id) {
       r.created_at,
       r.updated_at,
       COUNT(DISTINCT ur.user_id) AS member_count,
-      COUNT(DISTINCT rp.permission_id) AS permission_count
+      COUNT(DISTINCT rm.menu_id) AS menu_count
      FROM sys_roles r
      LEFT JOIN sys_user_roles ur ON ur.role_id = r.id
-     LEFT JOIN sys_role_permissions rp ON rp.role_id = r.id
+     LEFT JOIN sys_role_menus rm ON rm.role_id = r.id
      WHERE r.id = ?
      GROUP BY
       r.id,
@@ -121,54 +121,54 @@ async function findByRoleCodeExcludingId(roleCode, excludedId) {
   return rows[0] || null;
 }
 
-async function findPermissionIds(permissionIds) {
-  if (permissionIds.length === 0) {
+async function findMenuIds(menuIds) {
+  if (menuIds.length === 0) {
     return [];
   }
 
-  const placeholders = permissionIds.map(() => '?').join(', ');
+  const placeholders = menuIds.map(() => '?').join(', ');
   const [rows] = await pool.query(
     `SELECT id
-     FROM sys_permissions
+     FROM sys_menus
      WHERE id IN (${placeholders})`,
-    permissionIds
+    menuIds
   );
 
   return rows.map((row) => row.id);
 }
 
-async function getRolePermissionIds(roleId) {
+async function getRoleMenuIds(roleId) {
   const [rows] = await pool.execute(
-    `SELECT permission_id
-     FROM sys_role_permissions
+    `SELECT menu_id
+     FROM sys_role_menus
      WHERE role_id = ?
-     ORDER BY permission_id ASC`,
+     ORDER BY menu_id ASC`,
     [roleId]
   );
 
-  return rows.map((row) => row.permission_id);
+  return rows.map((row) => row.menu_id);
 }
 
-async function updateRolePermissions(roleId, permissionIds) {
+async function updateRoleMenus(roleId, menuIds) {
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
     await connection.execute(
-      'DELETE FROM sys_role_permissions WHERE role_id = ?',
+      'DELETE FROM sys_role_menus WHERE role_id = ?',
       [roleId]
     );
 
-    if (permissionIds.length > 0) {
-      const values = permissionIds.map((permissionId) => [roleId, permissionId]);
+    if (menuIds.length > 0) {
+      const values = menuIds.map((menuId) => [roleId, menuId]);
       await connection.query(
-        'INSERT INTO sys_role_permissions (role_id, permission_id) VALUES ?',
+        'INSERT INTO sys_role_menus (role_id, menu_id) VALUES ?',
         [values]
       );
     }
 
     await connection.commit();
-    return getRolePermissionIds(roleId);
+    return getRoleMenuIds(roleId);
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -204,9 +204,9 @@ module.exports = {
   findById,
   findByRoleCode,
   findByRoleCodeExcludingId,
-  findPermissionIds,
-  getRolePermissionIds,
+  findMenuIds,
+  getRoleMenuIds,
   listRoles,
   updateRole,
-  updateRolePermissions,
+  updateRoleMenus,
 };
