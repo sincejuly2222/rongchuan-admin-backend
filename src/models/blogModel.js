@@ -148,7 +148,7 @@ async function findMaxCategorySortOrder() {
   return Number(rows[0]?.maxSortOrder || 0);
 }
 
-async function listBlogs({ current, pageSize, keyword, status }) {
+async function listBlogs({ current, pageSize, keyword, status, authorId }) {
   const offset = (current - 1) * pageSize;
   const conditions = [];
   const params = [];
@@ -161,6 +161,11 @@ async function listBlogs({ current, pageSize, keyword, status }) {
   if (typeof status === 'number') {
     conditions.push('b.status = ?');
     params.push(status);
+  }
+
+  if (typeof authorId === 'number') {
+    conditions.push('b.author_id = ?');
+    params.push(authorId);
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -188,13 +193,21 @@ async function listBlogs({ current, pageSize, keyword, status }) {
   };
 }
 
-async function listHomeBlogs(limit = 6) {
+async function listHomeBlogs(limit = 6, authorId) {
+  const conditions = ['b.status = 1'];
+  const params = [];
+
+  if (typeof authorId === 'number') {
+    conditions.push('b.author_id = ?');
+    params.push(authorId);
+  }
+
   const [rows] = await pool.query(
     `${BLOG_SELECT}
-     WHERE b.status = 1
+     WHERE ${conditions.join(' AND ')}
      ORDER BY COALESCE(b.published_at, b.created_at) DESC, b.id DESC
      LIMIT ?`,
-    [limit]
+    [...params, limit]
   );
 
   return rows.map(mapBlogRow);

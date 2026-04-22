@@ -185,7 +185,7 @@ function buildCurrentUserViews(userProfile, blogs = []) {
 async function buildAuthBootstrapData(user) {
   const userProfile = buildCurrentUserProfile(user);
   const menus = await menuModel.listMenusByUserId(userProfile.id);
-  const blogs = await blogModel.listHomeBlogs(6);
+  const blogs = await blogModel.listHomeBlogs(6, userProfile.id);
 
   return {
     user: userProfile,

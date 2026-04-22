@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS \`sys_blog_comments\` (
 `;
 
 async function testConnection() {
-  const connection = await pool.getConnection();
+  let connection;
 
   try {
     connection = await pool.getConnection();

@@ -45,6 +45,14 @@ function parseBlogStatus(value, defaultValue) {
   return normalized;
 }
 
+function parseBooleanQuery(value) {
+  if (value === undefined || value === null || value === '') {
+    return false;
+  }
+
+  return ['1', 'true', 'yes'].includes(String(value).trim().toLowerCase());
+}
+
 function normalizeTagList(value) {
   if (value === undefined || value === null || value === '') {
     return null;
@@ -361,6 +369,7 @@ async function listBlogs(req, res, next) {
     const keyword = req.query.keyword ? String(req.query.keyword).trim() : '';
     const status = parseOptionalInteger(req.query.status);
     const isAuthed = Boolean(req.user?.userId);
+    const mine = parseBooleanQuery(req.query.mine);
 
     if (!Number.isFinite(current) || current < 1 || !Number.isFinite(pageSize) || pageSize < 1) {
       return sendError(res, { statusCode: 400, message: '分页参数不正确' });
@@ -374,11 +383,18 @@ async function listBlogs(req, res, next) {
       return sendError(res, { statusCode: 401, message: '公开接口仅支持查看已发布博客' });
     }
 
+    if (mine && !isAuthed) {
+      return sendError(res, { statusCode: 401, message: '查看我的博客需要先登录' });
+    }
+
+    const shouldFilterAuthor = mine || (isAuthed && status === 0);
+
     const result = await blogModel.listBlogs({
       current,
       pageSize,
       keyword,
       status: typeof status === 'number' ? status : (isAuthed ? undefined : 1),
+      authorId: shouldFilterAuthor ? req.user.userId : undefined,
     });
 
     return sendSuccess(res, {
