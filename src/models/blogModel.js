@@ -14,6 +14,7 @@ function mapBlogRow(row) {
     category_id: row.category_id,
     category_name: row.category_name,
     category_slug: row.category_slug,
+    category_owner_id: row.category_owner_id,
     category_description: row.category_description,
     category_article_count: row.category_article_count,
     tag_list: row.tag_list
@@ -44,12 +45,14 @@ const BLOG_SELECT = `
     b.category_id,
     c.name AS category_name,
     c.slug AS category_slug,
+    c.owner_id AS category_owner_id,
     c.description AS category_description,
     (
       SELECT COUNT(*)
       FROM sys_blogs published_blog
       WHERE published_blog.category_id = b.category_id
         AND published_blog.status = 1
+        AND (c.owner_id IS NULL OR published_blog.author_id = c.owner_id)
     ) AS category_article_count,
     b.tag_list,
     b.status,
@@ -77,32 +80,43 @@ async function findById(id) {
   return mapBlogRow(rows[0]);
 }
 
-async function findCategoryById(id) {
+async function findCategoryById(id, ownerId) {
+  const params = [id];
+  let ownerClause = '';
+
+  if (typeof ownerId === 'number') {
+    ownerClause = 'AND c.owner_id = ?';
+    params.push(ownerId);
+  }
+
   const [rows] = await pool.execute(
     `SELECT
-      id,
-      name,
-      slug,
-      description,
-      sort_order,
-      status,
-      created_at,
-      updated_at
-     FROM sys_blog_categories
-     WHERE id = ?
+      c.id,
+      c.owner_id,
+      c.name,
+      c.slug,
+      c.description,
+      c.sort_order,
+      c.status,
+      c.created_at,
+      c.updated_at
+     FROM sys_blog_categories c
+     WHERE c.id = ?
+       ${ownerClause}
      LIMIT 1`,
-    [id]
+    params
   );
 
   return rows[0] || null;
 }
 
-async function findCategoryByName(name, excludeId = null) {
-  const params = [name];
+async function findCategoryByName(name, ownerId, excludeId = null) {
+  const params = [name, ownerId];
   let sql = `
     SELECT id, name, slug
     FROM sys_blog_categories
     WHERE name = ?
+      AND owner_id = ?
   `;
 
   if (excludeId) {
@@ -116,16 +130,17 @@ async function findCategoryByName(name, excludeId = null) {
   return rows[0] || null;
 }
 
-async function findCategoryBySlug(slug, excludeId = null) {
+async function findCategoryBySlug(slug, ownerId, excludeId = null) {
   if (!slug) {
     return null;
   }
 
-  const params = [slug];
+  const params = [slug, ownerId];
   let sql = `
     SELECT id, name, slug
     FROM sys_blog_categories
     WHERE slug = ?
+      AND owner_id = ?
   `;
 
   if (excludeId) {
@@ -139,10 +154,12 @@ async function findCategoryBySlug(slug, excludeId = null) {
   return rows[0] || null;
 }
 
-async function findMaxCategorySortOrder() {
+async function findMaxCategorySortOrder(ownerId) {
   const [rows] = await pool.execute(
     `SELECT COALESCE(MAX(sort_order), 0) AS maxSortOrder
-     FROM sys_blog_categories`
+     FROM sys_blog_categories
+     WHERE owner_id = ?`,
+    [ownerId]
   );
 
   return Number(rows[0]?.maxSortOrder || 0);
@@ -213,10 +230,19 @@ async function listHomeBlogs(limit = 6, authorId) {
   return rows.map(mapBlogRow);
 }
 
-async function listBlogCategories(limit = 8) {
+async function listBlogCategories(limit = 8, ownerId) {
+  const conditions = ['c.status = 1'];
+  const params = [];
+
+  if (typeof ownerId === 'number') {
+    conditions.push('c.owner_id = ?');
+    params.push(ownerId);
+  }
+
   const [rows] = await pool.query(
     `SELECT
       c.id,
+      c.owner_id AS ownerId,
       c.name,
       c.slug,
       c.description,
@@ -226,15 +252,17 @@ async function listBlogCategories(limit = 8) {
      LEFT JOIN sys_blogs b
        ON b.category_id = c.id
       AND b.status = 1
-     WHERE c.status = 1
-     GROUP BY c.id, c.name, c.slug, c.description, c.sort_order
+      ${typeof ownerId === 'number' ? 'AND b.author_id = c.owner_id' : ''}
+     WHERE ${conditions.join(' AND ')}
+     GROUP BY c.id, c.owner_id, c.name, c.slug, c.description, c.sort_order
      ORDER BY c.sort_order ASC, c.id ASC
      LIMIT ?`,
-    [limit]
+    [...params, limit]
   );
 
   return rows.map((row) => ({
     id: row.id,
+    ownerId: row.ownerId,
     name: row.name,
     slug: row.slug,
     description: row.description,
@@ -243,18 +271,21 @@ async function listBlogCategories(limit = 8) {
   }));
 }
 
-async function listManageBlogCategories({ keyword = '' } = {}) {
-  const params = [];
-  let whereClause = '';
+async function listManageBlogCategories({ keyword = '', ownerId } = {}) {
+  const conditions = ['c.owner_id = ?'];
+  const params = [ownerId];
 
   if (keyword) {
-    whereClause = 'WHERE c.name LIKE ? OR c.slug LIKE ? OR c.description LIKE ?';
+    conditions.push('(c.name LIKE ? OR c.slug LIKE ? OR c.description LIKE ?)');
     params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
+
+  const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
   const [rows] = await pool.query(
     `SELECT
       c.id,
+      c.owner_id AS ownerId,
       c.name,
       c.slug,
       c.description,
@@ -266,15 +297,18 @@ async function listManageBlogCategories({ keyword = '' } = {}) {
       SUM(CASE WHEN b.status = 1 THEN 1 ELSE 0 END) AS publishedArticleCount,
       SUM(CASE WHEN b.status = 0 THEN 1 ELSE 0 END) AS draftArticleCount
      FROM sys_blog_categories c
-     LEFT JOIN sys_blogs b ON b.category_id = c.id
+     LEFT JOIN sys_blogs b
+       ON b.category_id = c.id
+      AND b.author_id = c.owner_id
      ${whereClause}
-     GROUP BY c.id, c.name, c.slug, c.description, c.sort_order, c.status, c.created_at, c.updated_at
+     GROUP BY c.id, c.owner_id, c.name, c.slug, c.description, c.sort_order, c.status, c.created_at, c.updated_at
      ORDER BY c.sort_order ASC, c.id ASC`,
     params
   );
 
   return rows.map((row) => ({
     id: row.id,
+    ownerId: row.ownerId,
     name: row.name,
     slug: row.slug,
     description: row.description,
@@ -288,50 +322,53 @@ async function listManageBlogCategories({ keyword = '' } = {}) {
   }));
 }
 
-async function createBlogCategory({ name, slug = null, description = null, sortOrder = 0, status = 1 }) {
+async function createBlogCategory({ ownerId, name, slug = null, description = null, sortOrder = 0, status = 1 }) {
   const [result] = await pool.execute(
-    `INSERT INTO sys_blog_categories (name, slug, description, sort_order, status)
-     VALUES (?, ?, ?, ?, ?)`,
-    [name, slug, description, sortOrder, status]
+    `INSERT INTO sys_blog_categories (owner_id, name, slug, description, sort_order, status)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [ownerId, name, slug, description, sortOrder, status]
   );
 
-  return findCategoryById(result.insertId);
+  return findCategoryById(result.insertId, ownerId);
 }
 
-async function updateBlogCategory(id, { name, slug = null, description = null, sortOrder = 0 }) {
+async function updateBlogCategory(id, ownerId, { name, slug = null, description = null, sortOrder = 0 }) {
   await pool.execute(
     `UPDATE sys_blog_categories
      SET name = ?,
          slug = ?,
          description = ?,
          sort_order = ?
-     WHERE id = ?`,
-    [name, slug, description, sortOrder, id]
+     WHERE id = ?
+       AND owner_id = ?`,
+    [name, slug, description, sortOrder, id, ownerId]
   );
 
-  return findCategoryById(id);
+  return findCategoryById(id, ownerId);
 }
 
-async function deleteBlogCategory(id) {
+async function deleteBlogCategory(id, ownerId) {
   await pool.execute(
     `DELETE FROM sys_blog_categories
-     WHERE id = ?`,
-    [id]
+     WHERE id = ?
+       AND owner_id = ?`,
+    [id, ownerId]
   );
 }
 
-async function countBlogsByCategory(id) {
+async function countBlogsByCategory(id, ownerId) {
   const [rows] = await pool.execute(
     `SELECT COUNT(*) AS total
      FROM sys_blogs
-     WHERE category_id = ?`,
-    [id]
+     WHERE category_id = ?
+       AND author_id = ?`,
+    [id, ownerId]
   );
 
   return Number(rows[0]?.total || 0);
 }
 
-async function sortBlogCategories(orderedIds) {
+async function sortBlogCategories(ownerId, orderedIds) {
   const connection = await pool.getConnection();
 
   try {
@@ -341,8 +378,9 @@ async function sortBlogCategories(orderedIds) {
       await connection.execute(
         `UPDATE sys_blog_categories
          SET sort_order = ?
-         WHERE id = ?`,
-        [index + 1, orderedIds[index]]
+         WHERE id = ?
+           AND owner_id = ?`,
+        [index + 1, orderedIds[index], ownerId]
       );
     }
 

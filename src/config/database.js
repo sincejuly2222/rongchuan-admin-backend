@@ -43,6 +43,7 @@ const profileCommentSqls = [
 const blogCategoryTableSql = `
 CREATE TABLE IF NOT EXISTS \`sys_blog_categories\` (
   \`id\` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '博客分类主键',
+  \`owner_id\` BIGINT UNSIGNED DEFAULT NULL COMMENT 'user id',
   \`name\` VARCHAR(100) NOT NULL COMMENT '分类名称',
   \`slug\` VARCHAR(120) DEFAULT NULL COMMENT '分类标识',
   \`description\` VARCHAR(500) DEFAULT NULL COMMENT '分类描述',
@@ -51,9 +52,13 @@ CREATE TABLE IF NOT EXISTS \`sys_blog_categories\` (
   \`created_at\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   \`updated_at\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (\`id\`),
-  UNIQUE KEY \`uk_sys_blog_categories_name\` (\`name\`),
-  UNIQUE KEY \`uk_sys_blog_categories_slug\` (\`slug\`),
-  KEY \`idx_sys_blog_categories_status_sort\` (\`status\`, \`sort_order\`)
+  UNIQUE KEY \`uk_sys_blog_categories_owner_name\` (\`owner_id\`, \`name\`),
+  UNIQUE KEY \`uk_sys_blog_categories_owner_slug\` (\`owner_id\`, \`slug\`),
+  KEY \`idx_sys_blog_categories_owner_status_sort\` (\`owner_id\`, \`status\`, \`sort_order\`),
+  CONSTRAINT \`fk_sys_blog_categories_owner_id\`
+    FOREIGN KEY (\`owner_id\`) REFERENCES \`sys_users\` (\`id\`)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='博客分类表';
 `;
 
@@ -157,6 +162,91 @@ async function ensureBlogTable() {
   await pool.execute(blogCategoryTableSql);
   await pool.execute(blogTableSql);
   await pool.execute(blogCommentTableSql);
+
+  const [categoryColumns] = await pool.query(
+    `SELECT COLUMN_NAME
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'sys_blog_categories'`,
+    [env.db.database]
+  );
+  const existingCategoryColumns = new Set(categoryColumns.map((row) => row.COLUMN_NAME));
+
+  if (!existingCategoryColumns.has('owner_id')) {
+    await pool.execute(
+      "ALTER TABLE `sys_blog_categories` ADD COLUMN `owner_id` BIGINT UNSIGNED DEFAULT NULL COMMENT 'user id' AFTER `id`"
+    );
+  }
+
+  await pool.execute(
+    `UPDATE sys_blog_categories c
+     JOIN (
+       SELECT category_id, MIN(author_id) AS owner_id, COUNT(DISTINCT author_id) AS author_count
+       FROM sys_blogs
+       WHERE category_id IS NOT NULL
+       GROUP BY category_id
+     ) usage_info ON usage_info.category_id = c.id
+     LEFT JOIN sys_blog_categories existing
+       ON existing.owner_id = usage_info.owner_id
+      AND existing.name = c.name
+      AND existing.id <> c.id
+     SET c.owner_id = usage_info.owner_id
+     WHERE c.owner_id IS NULL
+       AND usage_info.author_count = 1
+       AND existing.id IS NULL`
+  );
+
+  const [categoryIndexes] = await pool.query(
+    `SELECT INDEX_NAME
+     FROM information_schema.STATISTICS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'sys_blog_categories'`,
+    [env.db.database]
+  );
+  const existingCategoryIndexes = new Set(categoryIndexes.map((row) => row.INDEX_NAME));
+
+  for (const legacyIndex of ['uk_sys_blog_categories_name', 'uk_sys_blog_categories_slug']) {
+    if (existingCategoryIndexes.has(legacyIndex)) {
+      await pool.execute(`ALTER TABLE \`sys_blog_categories\` DROP INDEX \`${legacyIndex}\``);
+      existingCategoryIndexes.delete(legacyIndex);
+    }
+  }
+
+  if (!existingCategoryIndexes.has('uk_sys_blog_categories_owner_name')) {
+    await pool.execute(
+      'ALTER TABLE `sys_blog_categories` ADD UNIQUE KEY `uk_sys_blog_categories_owner_name` (`owner_id`, `name`)'
+    );
+  }
+
+  if (!existingCategoryIndexes.has('uk_sys_blog_categories_owner_slug')) {
+    await pool.execute(
+      'ALTER TABLE `sys_blog_categories` ADD UNIQUE KEY `uk_sys_blog_categories_owner_slug` (`owner_id`, `slug`)'
+    );
+  }
+
+  if (!existingCategoryIndexes.has('idx_sys_blog_categories_owner_status_sort')) {
+    await pool.execute(
+      'ALTER TABLE `sys_blog_categories` ADD KEY `idx_sys_blog_categories_owner_status_sort` (`owner_id`, `status`, `sort_order`)'
+    );
+  }
+
+  const [categoryConstraints] = await pool.query(
+    `SELECT CONSTRAINT_NAME
+     FROM information_schema.KEY_COLUMN_USAGE
+     WHERE TABLE_SCHEMA = ?
+       AND TABLE_NAME = 'sys_blog_categories'
+       AND REFERENCED_TABLE_NAME IS NOT NULL`,
+    [env.db.database]
+  );
+  const existingCategoryConstraints = new Set(categoryConstraints.map((row) => row.CONSTRAINT_NAME));
+
+  if (!existingCategoryConstraints.has('fk_sys_blog_categories_owner_id')) {
+    await pool.execute(
+      `ALTER TABLE \`sys_blog_categories\`
+       ADD CONSTRAINT \`fk_sys_blog_categories_owner_id\`
+       FOREIGN KEY (\`owner_id\`) REFERENCES \`sys_users\` (\`id\`)
+       ON UPDATE CASCADE
+       ON DELETE CASCADE`
+    );
+  }
 
   const [columns] = await pool.query(
     `SELECT COLUMN_NAME

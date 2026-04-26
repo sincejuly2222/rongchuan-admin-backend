@@ -81,6 +81,7 @@ function buildBlogCategory(blog) {
 
   return {
     id: blog.category_id,
+    ownerId: blog.category_owner_id,
     name: blog.category_name,
     slug: blog.category_slug,
     description: blog.category_description,
@@ -118,7 +119,7 @@ function buildBlogDetail(blog) {
   };
 }
 
-async function validateCategoryId(categoryId, res) {
+async function validateCategoryId(categoryId, ownerId, res) {
   if (categoryId === undefined) {
     return undefined;
   }
@@ -132,7 +133,7 @@ async function validateCategoryId(categoryId, res) {
     return false;
   }
 
-  const category = await blogModel.findCategoryById(categoryId);
+  const category = await blogModel.findCategoryById(categoryId, ownerId);
   if (!category || category.status !== 1) {
     sendError(res, { statusCode: 400, message: '专栏分类不存在或已停用' });
     return false;
@@ -157,8 +158,8 @@ async function resolveOwnedBlog(blogId, userId, res) {
   return blog;
 }
 
-async function resolveCategory(categoryId, res) {
-  const category = await blogModel.findCategoryById(categoryId);
+async function resolveCategory(categoryId, ownerId, res) {
+  const category = await blogModel.findCategoryById(categoryId, ownerId);
 
   if (!category) {
     sendError(res, { statusCode: 404, message: '专栏分类不存在' });
@@ -168,7 +169,7 @@ async function resolveCategory(categoryId, res) {
   return category;
 }
 
-async function validateCategoryPayload(req, res, existingId = null) {
+async function validateCategoryPayload(req, res, ownerId, existingId = null) {
   const name = req.body.name ? String(req.body.name).trim() : '';
   const slug = normalizeSlug(req.body.slug);
   const description = normalizeOptionalString(req.body.description);
@@ -184,14 +185,14 @@ async function validateCategoryPayload(req, res, existingId = null) {
     return null;
   }
 
-  const duplicatedName = await blogModel.findCategoryByName(name, existingId);
+  const duplicatedName = await blogModel.findCategoryByName(name, ownerId, existingId);
   if (duplicatedName) {
     sendError(res, { statusCode: 400, message: '分类名称已存在' });
     return null;
   }
 
   if (slug) {
-    const duplicatedSlug = await blogModel.findCategoryBySlug(slug, existingId);
+    const duplicatedSlug = await blogModel.findCategoryBySlug(slug, ownerId, existingId);
     if (duplicatedSlug) {
       sendError(res, { statusCode: 400, message: '分类 slug 已存在' });
       return null;
@@ -200,7 +201,7 @@ async function validateCategoryPayload(req, res, existingId = null) {
 
   const defaultSortOrder = existingId
     ? undefined
-    : (await blogModel.findMaxCategorySortOrder()) + 1;
+    : (await blogModel.findMaxCategorySortOrder(ownerId)) + 1;
 
   return {
     name,
@@ -218,7 +219,7 @@ async function listBlogCategories(req, res, next) {
       return sendError(res, { statusCode: 400, message: '分类数量参数不正确' });
     }
 
-    const list = await blogModel.listBlogCategories(limit);
+    const list = await blogModel.listBlogCategories(limit, req.user?.userId);
 
     return sendSuccess(res, {
       message: '获取博客分类成功',
@@ -234,7 +235,7 @@ async function listBlogCategories(req, res, next) {
 async function listManageBlogCategories(req, res, next) {
   try {
     const keyword = req.query.keyword ? String(req.query.keyword).trim() : '';
-    const list = await blogModel.listManageBlogCategories({ keyword });
+    const list = await blogModel.listManageBlogCategories({ keyword, ownerId: req.user.userId });
 
     return sendSuccess(res, {
       message: '获取专栏分类管理列表成功',
@@ -249,12 +250,15 @@ async function listManageBlogCategories(req, res, next) {
 
 async function createBlogCategory(req, res, next) {
   try {
-    const payload = await validateCategoryPayload(req, res);
+    const payload = await validateCategoryPayload(req, res, req.user.userId);
     if (!payload) {
       return null;
     }
 
-    const category = await blogModel.createBlogCategory(payload);
+    const category = await blogModel.createBlogCategory({
+      ...payload,
+      ownerId: req.user.userId,
+    });
 
     return sendSuccess(res, {
       statusCode: 201,
@@ -274,17 +278,17 @@ async function updateBlogCategory(req, res, next) {
       return sendError(res, { statusCode: 400, message: '专栏分类 ID 不正确' });
     }
 
-    const existingCategory = await resolveCategory(categoryId, res);
+    const existingCategory = await resolveCategory(categoryId, req.user.userId, res);
     if (!existingCategory) {
       return null;
     }
 
-    const payload = await validateCategoryPayload(req, res, categoryId);
+    const payload = await validateCategoryPayload(req, res, req.user.userId, categoryId);
     if (!payload) {
       return null;
     }
 
-    const category = await blogModel.updateBlogCategory(categoryId, {
+    const category = await blogModel.updateBlogCategory(categoryId, req.user.userId, {
       ...payload,
       sortOrder: payload.sortOrder ?? existingCategory.sort_order ?? 0,
     });
@@ -306,12 +310,12 @@ async function deleteBlogCategory(req, res, next) {
       return sendError(res, { statusCode: 400, message: '专栏分类 ID 不正确' });
     }
 
-    const category = await resolveCategory(categoryId, res);
+    const category = await resolveCategory(categoryId, req.user.userId, res);
     if (!category) {
       return null;
     }
 
-    const relatedBlogCount = await blogModel.countBlogsByCategory(categoryId);
+    const relatedBlogCount = await blogModel.countBlogsByCategory(categoryId, req.user.userId);
     if (relatedBlogCount > 0) {
       return sendError(res, {
         statusCode: 400,
@@ -319,7 +323,7 @@ async function deleteBlogCategory(req, res, next) {
       });
     }
 
-    await blogModel.deleteBlogCategory(categoryId);
+    await blogModel.deleteBlogCategory(categoryId, req.user.userId);
 
     return sendSuccess(res, {
       message: '删除专栏分类成功',
@@ -342,14 +346,14 @@ async function sortBlogCategories(req, res, next) {
       return sendError(res, { statusCode: 400, message: '排序分类 ID 列表不正确' });
     }
 
-    const categoryList = await blogModel.listManageBlogCategories();
+    const categoryList = await blogModel.listManageBlogCategories({ ownerId: req.user.userId });
     const categoryIds = new Set(categoryList.map((item) => item.id));
 
     if (orderedIds.length !== categoryIds.size || orderedIds.some((id) => !categoryIds.has(id))) {
       return sendError(res, { statusCode: 400, message: '排序分类列表必须覆盖全部分类' });
     }
 
-    await blogModel.sortBlogCategories(orderedIds);
+    await blogModel.sortBlogCategories(req.user.userId, orderedIds);
 
     return sendSuccess(res, {
       message: '专栏分类排序更新成功',
@@ -480,7 +484,7 @@ async function createBlog(req, res, next) {
       return sendError(res, { statusCode: 400, message: '专栏分类参数不正确' });
     }
 
-    const categoryId = await validateCategoryId(parsedCategoryId, res);
+    const categoryId = await validateCategoryId(parsedCategoryId, req.user.userId, res);
     if (categoryId === false) {
       return null;
     }
@@ -540,7 +544,7 @@ async function updateBlog(req, res, next) {
       return null;
     }
 
-    const categoryId = await validateCategoryId(parsedCategoryId, res);
+    const categoryId = await validateCategoryId(parsedCategoryId, req.user.userId, res);
     if (categoryId === false) {
       return null;
     }

@@ -4,7 +4,7 @@ const { authenticateOptionalToken, authenticateToken } = require('../middleware/
 
 const router = express.Router();
 
-router.get('/categories', blogController.listBlogCategories);
+router.get('/categories', authenticateOptionalToken, blogController.listBlogCategories);
 router.get('/categories/manage', authenticateToken, blogController.listManageBlogCategories);
 router.post('/categories', authenticateToken, blogController.createBlogCategory);
 router.put('/categories/:id', authenticateToken, blogController.updateBlogCategory);
